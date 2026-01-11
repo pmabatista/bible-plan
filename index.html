@@ -134,6 +134,27 @@
                 <li><strong>P</strong>rayer (Oração)</li>
             </ul>
         </div>
+
+        <!-- ANOTAÇÕES PESSOAIS -->
+        <div class="card notes-card">
+            <div class="card-title">
+                <span>📝 Minhas Anotações</span>
+                <span id="notes-status" class="notes-status"></span>
+            </div>
+            <p class="notes-hint">Registre suas reflexões, orações e insights sobre a leitura de hoje.</p>
+            <textarea 
+                id="daily-notes" 
+                class="notes-textarea" 
+                placeholder="O que Deus falou ao meu coração hoje...&#10;&#10;• Versículo que me tocou:&#10;• Como aplicar na minha vida:&#10;• Oração:"
+                oninput="app.onNotesInput()"
+            ></textarea>
+            <div class="notes-footer">
+                <span id="notes-date" class="notes-date"></span>
+                <button id="notes-save-btn" class="notes-save-btn" onclick="app.saveNotes()">
+                    💾 Salvar
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- VISÃO SEMANAL -->

@@ -56,6 +56,9 @@ class BibleApp {
         this.bibleCache = new Map();
         this.readerFontSize = 1.15; // rem
         this.readerTheme = 'light'; // light, sepia, dark
+        this.notesCache = new Map(); // Cache de notas por data
+        this.notesSaveTimeout = null; // Debounce para auto-save
+        this.notesModified = false;
         this.init();
     }
 
@@ -521,6 +524,7 @@ class BibleApp {
         markBtn.innerText = isRead ? '✓ Lido' : '✓ Marcar como Lido';
 
         await this.fetchReadingTime(data.references);
+        await this.updateNotesUI();
     }
 
     renderWeekly() {
@@ -698,6 +702,120 @@ class BibleApp {
     closeReader() {
         document.getElementById('reader-modal').classList.remove('open');
         document.body.style.overflow = 'auto';
+    }
+
+    // ==============================================
+    // SISTEMA DE ANOTAÇÕES
+    // ==============================================
+    async loadNotes(dateStr) {
+        if (!this.userId) return '';
+        
+        // Tenta cache primeiro
+        if (this.notesCache.has(dateStr)) {
+            return this.notesCache.get(dateStr);
+        }
+        
+        try {
+            const docRef = db.collection('users').doc(this.userId).collection('notes').doc(dateStr);
+            const doc = await docRef.get();
+            
+            if (doc.exists) {
+                const noteText = doc.data().text || '';
+                this.notesCache.set(dateStr, noteText);
+                return noteText;
+            }
+            return '';
+        } catch (error) {
+            console.error('Erro ao carregar anotações:', error);
+            return '';
+        }
+    }
+
+    async saveNotes() {
+        if (!this.userId) {
+            this.showNotesStatus('⚠️ Faça login para salvar', 'warning');
+            return;
+        }
+        
+        const dateStr = this.currentDate.toISOString().split('T')[0];
+        const textarea = document.getElementById('daily-notes');
+        const noteText = textarea.value.trim();
+        
+        this.showNotesStatus('💾 Salvando...', 'saving');
+        
+        try {
+            const docRef = db.collection('users').doc(this.userId).collection('notes').doc(dateStr);
+            
+            if (noteText) {
+                await docRef.set({
+                    text: noteText,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    date: dateStr
+                });
+                this.notesCache.set(dateStr, noteText);
+            } else {
+                // Se vazio, remove a nota
+                await docRef.delete();
+                this.notesCache.delete(dateStr);
+            }
+            
+            this.notesModified = false;
+            this.showNotesStatus('✓ Salvo', 'saved');
+            
+            // Limpa o status após 2 segundos
+            setTimeout(() => this.showNotesStatus('', ''), 2000);
+            
+        } catch (error) {
+            console.error('Erro ao salvar anotações:', error);
+            this.showNotesStatus('❌ Erro ao salvar', 'error');
+        }
+    }
+
+    onNotesInput() {
+        this.notesModified = true;
+        this.showNotesStatus('● Não salvo', 'unsaved');
+        
+        // Auto-save com debounce de 3 segundos
+        if (this.notesSaveTimeout) {
+            clearTimeout(this.notesSaveTimeout);
+        }
+        
+        this.notesSaveTimeout = setTimeout(() => {
+            if (this.notesModified) {
+                this.saveNotes();
+            }
+        }, 3000);
+    }
+
+    showNotesStatus(message, type) {
+        const statusEl = document.getElementById('notes-status');
+        if (!statusEl) return;
+        
+        statusEl.innerText = message;
+        statusEl.className = `notes-status ${type}`;
+    }
+
+    async updateNotesUI() {
+        const dateStr = this.currentDate.toISOString().split('T')[0];
+        const textarea = document.getElementById('daily-notes');
+        const dateLabel = document.getElementById('notes-date');
+        
+        if (!textarea) return;
+        
+        // Atualiza label da data
+        dateLabel.innerText = this.formatDateLong(this.currentDate);
+        
+        // Carrega notas existentes
+        const existingNotes = await this.loadNotes(dateStr);
+        textarea.value = existingNotes;
+        this.notesModified = false;
+        
+        // Atualiza status
+        if (existingNotes) {
+            this.showNotesStatus('', '');
+        } else {
+            this.showNotesStatus('', '');
+        }
     }
 
     adjustFontSize(delta) {
