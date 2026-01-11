@@ -342,48 +342,6 @@ Use português brasileiro, seja profundo mas acessível.`;
         sidebar.classList.toggle('translate-x-0');
     }
 
-    showError(message) {
-        alert(message);
-    }
-}
-
-// Inicializar app
-const app = new ReaderApp();
-            
-            await db.collection('users').doc(this.currentUser.uid)
-                .collection('readings').doc(today).set({
-                    completed: true,
-                    book: this.currentReading.book,
-                    chapter: this.currentReading.chapter,
-                    completedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-            // Feedback visual
-            this.showSuccess('✓ Leitura concluída!');
-            
-            // Atualizar progress bar
-            this.updateProgressBar();
-        } catch (error) {
-            console.error('Erro ao salvar progresso:', error);
-            this.showError('Erro ao salvar progresso');
-        }
-    }
-
-    updateProgressBar() {
-        // Calcular progresso (simplificado)
-        const progressBar = document.getElementById('progress-bar');
-        if (progressBar) {
-            const currentWidth = parseFloat(progressBar.style.width) || 12;
-            const newWidth = Math.min(currentWidth + 0.27, 100); // ~365 dias
-            progressBar.style.width = `${newWidth}%`;
-        }
-    }
-
-    toggleMobileMenu() {
-        // Implementar menu mobile
-        alert('Menu mobile em desenvolvimento');
-    }
-
     showToast(message, type = 'success') {
         const toast = document.createElement('div');
         toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-slide-in ${type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white font-display`;
@@ -410,4 +368,4 @@ const app = new ReaderApp();
 }
 
 // Inicializa o app
-const readerApp = new ReaderApp();
+const app = new ReaderApp();
