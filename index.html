@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Plano Bíblia Reader Pro</title>
+    
+    <!-- Fontes -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- Libs Externas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Firebase SDK v9 (Compatível) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- LOGIN MODAL -->
+<div id="login-modal" class="login-modal">
+    <div class="login-box">
+        <div class="login-icon">📖</div>
+        <h1 class="login-title">Bíblia Anual</h1>
+        <p class="login-subtitle">Escolha como deseja continuar sua jornada de leitura bíblica</p>
+        
+        <button class="login-btn login-btn-google" onclick="app.loginWithGoogle()">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Entrar com Google
+        </button>
+        
+        <div class="login-divider">ou</div>
+        
+        <button class="login-btn login-btn-anonymous" onclick="app.continueAnonymously()">
+            🚀 Continuar sem Login
+        </button>
+        
+        <p class="login-privacy">
+            Ao continuar, você aceita nosso uso de dados apenas para salvar seu progresso de leitura.
+        </p>
+    </div>
+</div>
+
+<header>
+    <div class="top-bar">
+        <div class="logo">📖 Bíblia Anual</div>
+        <div id="auth-status" class="auth-status loading">⏳ Carregando...</div>
+        <input type="date" id="dateInput" class="date-picker" onchange="app.updateDate()">
+    </div>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="app.switchTab('daily')">Hoje</button>
+        <button class="tab-btn" onclick="app.switchTab('weekly')">Semana</button>
+        <button class="tab-btn" onclick="app.switchTab('monthly')">Mês</button>
+        <button class="tab-btn" onclick="app.switchTab('yearly')">Ano</button>
+    </div>
+</header>
+
+<main>
+    <!-- VISÃO DIÁRIA -->
+    <div id="view-daily" class="content-section active">
+        <div class="card">
+            <div class="card-title">Leitura de Hoje</div>
+            <div id="daily-theme" class="tag">Carregando...</div>
+            <div id="daily-reading" class="highlight-text">...</div>
+            
+            <div id="reading-timer" class="time-badge">
+                <span id="timer-icon" class="spinner">⏳</span> 
+                <span id="timer-text">Calculando tempo...</span>
+            </div>
+
+            <button class="btn-read" onclick="app.openReader()">📖 Ler Versículos Agora</button>
+            <button id="mark-read-btn" class="btn-mark-read" onclick="app.markTodayAsRead()">✓ Marcar como Lido</button>
+
+            <p id="daily-context" style="color: var(--text-sec); font-size: 0.9rem; line-height: 1.5; margin-top: 15px;"></p>
+        </div>
+        <div class="card" style="background: #eff6ff; border: 1px solid #dbeafe;">
+            <div class="card-title" style="color: var(--primary);">Método SOAP</div>
+            <ul style="padding-left: 20px; margin: 10px 0; color: var(--text-main); font-size: 0.9rem; line-height: 1.6;">
+                <li><strong>S</strong>cripture (Texto)</li>
+                <li><strong>O</strong>bservation (Observação)</li>
+                <li><strong>A</strong>pplication (Aplicação)</li>
+                <li><strong>P</strong>rayer (Oração)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- VISÃO SEMANAL -->
+    <div id="view-weekly" class="content-section">
+        <div class="card">
+            <div class="card-title" id="week-title">Semana Atual</div>
+            <div id="weekly-list"></div>
+        </div>
+        <p style="font-size:0.8rem; color:#666; text-align:center;">Marque os checkboxes para registrar seu progresso!</p>
+    </div>
+
+    <!-- VISÃO MENSAL -->
+    <div id="view-monthly" class="content-section">
+        <div class="card">
+            <div class="card-title" id="month-title">Visão do Mês</div>
+            <div id="monthly-list" style="font-size: 0.85rem; color: var(--text-sec);"></div>
+        </div>
+    </div>
+
+    <!-- VISÃO ANUAL -->
+    <div id="view-yearly" class="content-section">
+        <div class="card">
+            <div class="card-title">Progresso Anual</div>
+            <div id="yearly-list" style="max-height: 60vh; overflow-y: auto;"></div>
+        </div>
+    </div>
+</main>
+
+<button id="fab-btn" class="fab" onclick="app.handleFabClick()">
+    <span id="fab-text">📸 Imagem do Dia</span>
+</button>
+
+<!-- READER MODAL -->
+<div id="reader-modal" class="reader-modal">
+    <div class="reader-header">
+        <div class="reader-title" id="reader-title">Carregando...</div>
+        <button class="btn-close" onclick="app.closeReader()">&times;</button>
+    </div>
+    <div class="reader-body" id="reader-content">
+        <div style="text-align:center; margin-top:50px;">
+            <span class="spinner" style="font-size:2rem;">⏳</span>
+            <p>Buscando textos sagrados...</p>
+        </div>
+    </div>
+    <div class="reader-footer">
+        <button class="reader-btn btn-pdf" onclick="app.downloadReadingPDF()">📄 Baixar PDF</button>
+        <button class="reader-btn btn-copy" onclick="app.copyReading()">📋 Copiar</button>
+    </div>
+</div>
+
+<!-- SHARE NODES (Ocultos) -->
+<div id="share-node">
+    <div class="share-header">Plano Bíblico</div>
+    <div class="share-date" id="share-date">--/--</div>
+    <div class="share-theme" id="share-theme">TEMA</div>
+    <div class="share-reading" id="share-reading">Livro X-Y</div>
+    <div class="share-context" id="share-week">Semana 00</div>
+    <div class="share-time" id="share-time-display">⏱️ 00 min</div>
+    <div class="share-footer">Leia • Ore • Pratique</div>
+</div>
+
+<div id="share-list-node">
+    <div class="sl-header">
+        <div class="sl-title">Plano de Leitura</div>
+        <div class="sl-subtitle" id="sl-subtitle">Visão Geral</div>
+    </div>
+    <div class="sl-body" id="sl-body"></div>
+    <div class="sl-footer">Foco e Constância 🎯</div>
+</div>
+
+<!-- JavaScript -->
+<script src="app.js"></script>
+
+</body>
+</html>
