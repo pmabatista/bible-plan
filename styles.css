@@ -444,6 +444,155 @@ main { padding: 20px; flex: 1; max-width: 600px; margin: 0 auto; width: 100%; pa
     background: #FEE2E2;
 }
 
+/* --- REFLEXÃO DO DIA (IA) --- */
+.reflection-card {
+    background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%);
+    border: 1px solid #C4B5FD;
+}
+
+.reflection-card .card-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #6D28D9;
+}
+
+.refresh-btn {
+    background: rgba(109, 40, 217, 0.1);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.refresh-btn:hover {
+    background: rgba(109, 40, 217, 0.2);
+    transform: rotate(180deg);
+}
+
+.refresh-btn.spinning {
+    animation: spin 1s linear infinite;
+}
+
+.reflection-content {
+    min-height: 100px;
+}
+
+.reflection-placeholder {
+    text-align: center;
+    padding: 20px;
+}
+
+.reflection-icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.reflection-placeholder p {
+    color: #7C3AED;
+    font-size: 0.9rem;
+    margin: 0 0 15px 0;
+    line-height: 1.5;
+}
+
+.btn-generate {
+    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.btn-generate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+}
+
+.btn-generate:active {
+    transform: translateY(0);
+}
+
+.reflection-loading {
+    text-align: center;
+    padding: 30px;
+}
+
+.reflection-loading .spinner {
+    font-size: 2rem;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+}
+
+.reflection-loading p {
+    color: #7C3AED;
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+.reflection-text {
+    font-family: 'Merriweather', serif;
+    font-size: 1rem;
+    line-height: 1.9;
+    color: var(--text-main);
+    padding: 10px 0;
+}
+
+.reflection-text p {
+    margin: 0 0 12px 0;
+}
+
+.reflection-text p:last-child {
+    margin-bottom: 0;
+    font-style: italic;
+    color: #6D28D9;
+}
+
+.reflection-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid #C4B5FD;
+    font-size: 0.75rem;
+    color: #7C3AED;
+}
+
+.reflection-error {
+    text-align: center;
+    padding: 20px;
+    color: #DC2626;
+}
+
+.reflection-error span {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.reflection-error p {
+    margin: 0 0 5px 0;
+    font-weight: 600;
+}
+
+.reflection-error small {
+    color: #9CA3AF;
+    font-size: 0.8rem;
+}
+
 /* --- MODAL DE LEITURA --- */
 .reader-modal {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;

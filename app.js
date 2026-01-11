@@ -24,6 +24,17 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Inicializa Firebase AI (Gemini)
+let ai = null;
+let geminiModel = null;
+try {
+    ai = firebase.ai();
+    geminiModel = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+    console.log('✅ Firebase AI inicializado com sucesso!');
+} catch (e) {
+    console.warn('⚠️ Firebase AI não disponível. Ative no Console do Firebase.');
+}
+
 // ==============================================
 // DADOS BÍBLICOS
 // ==============================================
@@ -59,6 +70,7 @@ class BibleApp {
         this.notesCache = new Map(); // Cache de notas por data
         this.notesSaveTimeout = null; // Debounce para auto-save
         this.notesModified = false;
+        this.reflectionCache = new Map(); // Cache de reflexões por data
         this.init();
     }
 
@@ -525,6 +537,7 @@ class BibleApp {
 
         await this.fetchReadingTime(data.references);
         await this.updateNotesUI();
+        await this.loadReflectionForDate();
     }
 
     renderWeekly() {
@@ -816,6 +829,186 @@ class BibleApp {
         } else {
             this.showNotesStatus('', '');
         }
+    }
+
+    // ==============================================
+    // REFLEXÃO COM IA (Firebase AI / Gemini)
+    // ==============================================
+    async generateReflection(forceNew = false) {
+        const dateStr = this.currentDate.toISOString().split('T')[0];
+        const contentEl = document.getElementById('reflection-content');
+        const metaEl = document.getElementById('reflection-meta');
+        const refreshBtn = document.getElementById('refresh-reflection-btn');
+        
+        // Verifica se o Firebase AI está disponível
+        if (!geminiModel) {
+            contentEl.innerHTML = `
+                <div class="reflection-error">
+                    <span>⚠️</span>
+                    <p>Firebase AI não está configurado.</p>
+                    <small>Ative o "AI Logic" no Console do Firebase e recarregue a página.</small>
+                </div>
+            `;
+            return;
+        }
+
+        // Tenta cache primeiro (se não for forçar nova)
+        if (!forceNew) {
+            // Cache em memória
+            if (this.reflectionCache.has(dateStr)) {
+                this.displayReflection(this.reflectionCache.get(dateStr));
+                return;
+            }
+            
+            // Cache no Firestore
+            if (this.userId) {
+                try {
+                    const docRef = db.collection('users').doc(this.userId).collection('reflections').doc(dateStr);
+                    const doc = await docRef.get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        this.reflectionCache.set(dateStr, data);
+                        this.displayReflection(data);
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('Erro ao buscar reflexão do cache:', e);
+                }
+            }
+        }
+
+        // Mostra loading
+        refreshBtn.classList.add('spinning');
+        contentEl.innerHTML = `
+            <div class="reflection-loading">
+                <span class="spinner">✨</span>
+                <p>Gerando reflexão personalizada...</p>
+            </div>
+        `;
+
+        try {
+            // Pega dados da leitura atual
+            const week = this.getWeekNumber(this.currentDate);
+            const dayIdx = this.currentDate.getDay();
+            const reading = this.calculateReading(keys[dayIdx], week);
+            
+            const prompt = `Você é um pastor evangélico amoroso e sábio. 
+Gere uma reflexão devocional CURTA (máximo 120 palavras) sobre a leitura bíblica do dia.
+
+📖 Leitura: ${reading.text}
+📚 Tema: ${reading.theme}
+📅 Data: ${this.formatDateLong(this.currentDate)}
+
+Estrutura:
+1. Uma frase de abertura conectando o tema ao dia (1 linha)
+2. Um insight prático sobre a passagem (2-3 linhas)  
+3. Uma aplicação para a vida cotidiana (1-2 linhas)
+4. Uma breve oração de encerramento (2 linhas)
+
+Tom: Acolhedor, esperançoso, prático. Evite clichês religiosos.
+Responda APENAS com a reflexão, sem títulos ou formatação markdown.`;
+
+            const result = await geminiModel.generateContent(prompt);
+            const text = result.response.text();
+            
+            const reflectionData = {
+                text: text,
+                reading: reading.text,
+                theme: reading.theme,
+                generatedAt: new Date().toISOString()
+            };
+
+            // Salva no cache
+            this.reflectionCache.set(dateStr, reflectionData);
+            
+            // Salva no Firestore (se logado)
+            if (this.userId) {
+                try {
+                    await db.collection('users').doc(this.userId).collection('reflections').doc(dateStr).set(reflectionData);
+                } catch (e) {
+                    console.warn('Erro ao salvar reflexão:', e);
+                }
+            }
+
+            this.displayReflection(reflectionData);
+
+        } catch (error) {
+            console.error('Erro ao gerar reflexão:', error);
+            contentEl.innerHTML = `
+                <div class="reflection-error">
+                    <span>❌</span>
+                    <p>Erro ao gerar reflexão.</p>
+                    <small>${error.message || 'Tente novamente mais tarde.'}</small>
+                    <button class="btn-generate" onclick="app.generateReflection(true)" style="margin-top:10px;">
+                        🔄 Tentar Novamente
+                    </button>
+                </div>
+            `;
+        } finally {
+            refreshBtn.classList.remove('spinning');
+        }
+    }
+
+    displayReflection(data) {
+        const contentEl = document.getElementById('reflection-content');
+        const metaEl = document.getElementById('reflection-meta');
+        const timeEl = document.getElementById('reflection-time');
+        
+        // Formata o texto com parágrafos
+        const formattedText = data.text
+            .split('\n')
+            .filter(p => p.trim())
+            .map(p => `<p>${p}</p>`)
+            .join('');
+
+        contentEl.innerHTML = `<div class="reflection-text">${formattedText}</div>`;
+        
+        // Mostra meta info
+        metaEl.style.display = 'flex';
+        const generatedDate = new Date(data.generatedAt);
+        timeEl.innerText = `${generatedDate.toLocaleDateString('pt-BR')} ${generatedDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`;
+    }
+
+    async loadReflectionForDate() {
+        const dateStr = this.currentDate.toISOString().split('T')[0];
+        const contentEl = document.getElementById('reflection-content');
+        const metaEl = document.getElementById('reflection-meta');
+        
+        // Reset UI
+        metaEl.style.display = 'none';
+        
+        // Verifica cache
+        if (this.reflectionCache.has(dateStr)) {
+            this.displayReflection(this.reflectionCache.get(dateStr));
+            return;
+        }
+
+        // Verifica Firestore
+        if (this.userId) {
+            try {
+                const docRef = db.collection('users').doc(this.userId).collection('reflections').doc(dateStr);
+                const doc = await docRef.get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    this.reflectionCache.set(dateStr, data);
+                    this.displayReflection(data);
+                    return;
+                }
+            } catch (e) {
+                console.warn('Erro ao buscar reflexão:', e);
+            }
+        }
+
+        // Nenhuma reflexão encontrada - mostra placeholder
+        contentEl.innerHTML = `
+            <div class="reflection-placeholder">
+                <span class="reflection-icon">💭</span>
+                <p>Clique para gerar uma reflexão personalizada sobre a leitura de hoje.</p>
+                <button class="btn-generate" onclick="app.generateReflection()">
+                    ✨ Gerar Reflexão com IA
+                </button>
+            </div>
+        `;
     }
 
     adjustFontSize(delta) {
