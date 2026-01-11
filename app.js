@@ -1,34 +1,21 @@
 // ==============================================
-// CONFIGURAÇÃO DO FIREBASE
+// BÍBLIA ANUAL - Aplicativo Principal
 // ==============================================
-// IMPORTANTE: Substitua com suas credenciais do Firebase Console
-// 1. Acesse https://console.firebase.google.com/
-// 2. Crie um projeto
-// 3. Adicione um app Web
-// 4. Ative Firestore Database e Authentication (Anonymous)
-// 5. Cole suas credenciais abaixo:
+// Autor: Bible Plan Team
+// Versão: 2.0
+// Firebase: Auth, Firestore, AI Logic (Gemini)
+// ==============================================
 
-const firebaseConfig = {
-  apiKey: "AIzaSyB7uLzC11ekDHjx9Gw14Cx2R4h9I8hyGJ4",
-  authDomain: "bible-plan-95825.firebaseapp.com",
-  projectId: "bible-plan-95825",
-  storageBucket: "bible-plan-95825.firebasestorage.app",
-  messagingSenderId: "788106777338",
-  appId: "1:788106777338:web:9f19d40a7f45e6ec9f6f43",
-  measurementId: "G-DTSQ5TXN50"
-};
-
-
-// Inicializa Firebase (compat - para Auth e Firestore)
-firebase.initializeApp(firebaseConfig);
+// Inicializa Firebase usando config global (firebase-config.js)
+firebase.initializeApp(window.FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Firebase AI é inicializado no index.html via ES Module
+// Nota: Firebase AI (Gemini) é inicializado via ES Module no index.html
 // O modelo fica disponível em window.geminiModel
 
 // ==============================================
-// DADOS BÍBLICOS
+// DADOS BÍBLICOS - Plano de Leitura Anual
 // ==============================================
 const DB = {
     domingo: { nome: "Epístolas", livros: [{l:"Romanos", c:16}, {l:"1 Coríntios", c:16}, {l:"2 Coríntios", c:13}, {l:"Gálatas", c:6}, {l:"Efésios", c:6}, {l:"Filipenses", c:4}, {l:"Colossenses", c:4}, {l:"1 Tessalonicenses", c:5}, {l:"2 Tessalonicenses", c:3}, {l:"1 Timóteo", c:6}, {l:"2 Timóteo", c:4}, {l:"Tito", c:3}, {l:"Filemom", c:1}, {l:"Hebreus", c:13}, {l:"Tiago", c:5}, {l:"1 Pedro", c:5}, {l:"2 Pedro", c:3}, {l:"1 João", c:5}, {l:"2 João", c:1}, {l:"3 João", c:1}, {l:"Judas", c:1}] },

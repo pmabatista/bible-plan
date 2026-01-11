@@ -3,49 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Plano Bíblia Reader Pro</title>
+    <title>Bíblia Anual - Plano de Leitura</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
     
     <!-- Fontes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="styles.css">
     
     <!-- Libs Externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
-    <!-- Firebase SDK v12.7 (Compat para Auth/Firestore) -->
+    <!-- Firebase Config (compartilhada) -->
+    <script src="firebase-config.js"></script>
+    
+    <!-- Firebase SDK v12.7 -->
     <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore-compat.js"></script>
     
-    <!-- Firebase AI (ES Module - inicialização completa) -->
+    <!-- Firebase AI (ES Module) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
         import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-ai.js";
         
-        // Mesma config do app.js
-        const firebaseConfig = {
-            apiKey: "AIzaSyB7uLzC11ekDHjx9Gw14Cx2R4h9I8hyGJ4",
-            authDomain: "bible-plan-95825.firebaseapp.com",
-            projectId: "bible-plan-95825",
-            storageBucket: "bible-plan-95825.firebasestorage.app",
-            messagingSenderId: "788106777338",
-            appId: "1:788106777338:web:9f19d40a7f45e6ec9f6f43"
-        };
-        
         try {
-            // Inicializa app modular separado só para AI
-            const aiApp = initializeApp(firebaseConfig, "ai-app");
+            const aiApp = initializeApp(window.FIREBASE_CONFIG, "ai-app");
             const ai = getAI(aiApp, { backend: new GoogleAIBackend() });
             window.geminiModel = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
-            console.log('✅ Firebase AI inicializado com sucesso!');
+            console.log('✅ Firebase AI pronto!');
         } catch (e) {
-            console.warn('⚠️ Erro ao inicializar Firebase AI:', e.message);
-            console.warn('Detalhes:', e);
+            console.warn('⚠️ Firebase AI indisponível:', e.message);
         }
     </script>
-    
-    <!-- CSS -->
-    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
