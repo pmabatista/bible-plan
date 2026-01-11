@@ -52,10 +52,13 @@ class BibleApp {
         this.currentReadingText = "";
         this.userId = null;
         this.readDays = new Set();
+        this.planCache = null;
         this.init();
     }
 
     async init() {
+        this.initCache();
+        
         // Verifica se já está logado
         auth.onAuthStateChanged(async (user) => {
             if (user) {
@@ -83,6 +86,45 @@ class BibleApp {
                 this.toggleProfile();
             }
         });
+    }
+
+    initCache() {
+        const cached = localStorage.getItem('bible_plan_cache');
+        if (cached) {
+            try {
+                this.planCache = JSON.parse(cached);
+                console.log('Plano de leitura carregado do cache local.');
+            } catch (e) {
+                console.error('Erro ao ler cache, recalculando...');
+                this.generatePlanCache();
+            }
+        } else {
+            this.generatePlanCache();
+        }
+    }
+
+    generatePlanCache() {
+        console.log('Gerando plano de leitura para o ano inteiro...');
+        this.planCache = {};
+        for (let w = 1; w <= 52; w++) {
+            this.planCache[w] = {};
+            keys.forEach(k => {
+                this.planCache[w][k] = this.baseCalculateReading(k, w);
+            });
+        }
+        localStorage.setItem('bible_plan_cache', JSON.stringify(this.planCache));
+        console.log('Plano gerado e salvo no localStorage.');
+    }
+
+    formatDateLong(date) {
+        return `${date.getDate()} de ${monthNames[date.getMonth()]}, ${date.getFullYear()}`;
+    }
+
+    formatDateShort(date) {
+        const d = String(date.getDate()).padStart(2, '0');
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const y = String(date.getFullYear()).slice(-2);
+        return `${d}/${m}/${y}`;
     }
 
     showLoginModal() {
@@ -261,6 +303,13 @@ class BibleApp {
     }
 
     calculateReading(diaKey, semanaNum) {
+        if (this.planCache && this.planCache[semanaNum] && this.planCache[semanaNum][diaKey]) {
+            return this.planCache[semanaNum][diaKey];
+        }
+        return this.baseCalculateReading(diaKey, semanaNum);
+    }
+
+    baseCalculateReading(diaKey, semanaNum) {
         const categoria = DB[diaKey];
         let totalCap = categoria.livros.reduce((acc, l) => acc + l.c, 0);
         const rate = totalCap / 52;
@@ -379,7 +428,7 @@ class BibleApp {
         document.getElementById('daily-theme').innerText = data.theme;
         let finishedHtml = data.finished ? '<span class="finish-badge">🏁 LIVRO CONCLUÍDO</span>' : '';
         document.getElementById('daily-reading').innerHTML = data.text + finishedHtml;
-        document.getElementById('daily-context').innerText = `Hoje é ${names[dayIdx]}, dia de focar em ${data.theme}. Você está na Semana ${week}.`;
+        document.getElementById('daily-context').innerHTML = `<strong>${this.formatDateLong(this.currentDate)}</strong><br>Hoje é ${names[dayIdx]}, dia de focar em ${data.theme}. Você está na Semana ${week}.`;
         
         document.getElementById('share-date').innerText = this.currentDate.toLocaleDateString('pt-BR');
         document.getElementById('share-theme').innerText = data.theme;
@@ -419,10 +468,11 @@ class BibleApp {
             const finishedBadge = dReading.finished ? '<span style="color:#10B981; margin-left:5px;">🏁</span>' : '';
             const metaTag = `<span class="list-meta">Meta ${w}</span>`;
             const dateStr = currentDayDate.toISOString().split('T')[0];
+            const dateDisplay = this.formatDateShort(currentDayDate);
 
             html += `<div class="list-item ${completedClass}" style="${bg}">
                 <input type="checkbox" ${isRead ? 'checked' : ''} onchange="app.toggleDayRead('${dateStr}', this.checked)">
-                <div class="list-day">${names[i]}</div>
+                <div class="list-day">${names[i]}<br><span style="font-size:0.7rem; font-weight:normal; color:#9CA3AF;">${dateDisplay}</span></div>
                 <div class="list-content">
                     <span class="list-theme">${dReading.theme} ${metaTag}</span>
                     ${dReading.text} ${finishedBadge}
@@ -437,29 +487,88 @@ class BibleApp {
     }
 
     renderMonthly() {
+        const year = this.currentDate.getFullYear();
         const month = this.currentDate.getMonth();
-        document.getElementById('month-title').innerText = `Visão Geral: ${monthNames[month]}`;
+        document.getElementById('month-title').innerText = `Visão Geral: ${monthNames[month]} ${year}`;
         let html = "";
-        for(let w=1; w<=52; w++) {
-            let d = new Date(this.currentDate.getFullYear(), 0, 1);
-            d.setDate((w-1)*7 + 1);
-            if (d.getMonth() === month) {
-                html += `<div style="margin-top:15px; font-weight:bold; color:var(--text-main);">Semana ${w}</div>`;
-                keys.forEach((k, i) => {
-                    const d = this.calculateReading(k, w);
-                    html += `<div style="display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px dashed #eee;"><span>${names[i].substring(0,3)}</span><span>${d.text}</span></div>`;
-                });
-            }
+        
+        let firstDayOfMonth = new Date(year, month, 1);
+        let startDay = new Date(firstDayOfMonth);
+        startDay.setDate(1 - firstDayOfMonth.getDay()); 
+        
+        let current = new Date(startDay);
+        let lastWeekGenerated = -1;
+        
+        while (true) {
+             if (current.getMonth() > month && current.getFullYear() === year && current.getDay() === 0) break;
+             if (current.getFullYear() > year) break;
+
+             const w = this.getWeekNumber(current);
+             if (w !== lastWeekGenerated) {
+                 html += `<div style="margin-top:15px; font-weight:bold; color:var(--primary); border-bottom: 2px solid #E5E7EB; padding-bottom: 5px;">Semana ${w}</div>`;
+                 lastWeekGenerated = w;
+             }
+             
+             const k = keys[current.getDay()];
+             const dReading = this.calculateReading(k, w);
+             const isToday = current.toDateString() === this.currentDate.toDateString();
+             const isRead = this.isDateRead(current);
+             const bg = isToday ? "background:#EFF6FF; border-left: 4px solid var(--primary); padding-left: 10px;" : "";
+             const textStyle = isRead ? "text-decoration: line-through; opacity: 0.6;" : "";
+             
+             html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed #eee; ${bg}">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.75rem; color:#9CA3AF; width:45px;">${this.formatDateShort(current).substring(0,5)}</span>
+                    <span style="font-size:0.85rem; font-weight:600; width:35px;">${names[current.getDay()].substring(0,3)}</span>
+                    <span style="font-size:0.9rem; ${textStyle}">${dReading.text}</span>
+                </div>
+                <span style="font-size:0.7rem; color:var(--text-sec); background:#F3F4F6; padding:2px 6px; border-radius:4px;">${dReading.theme.substring(0,3)}</span>
+             </div>`;
+             
+             current.setDate(current.getDate() + 1);
         }
-        document.getElementById('monthly-list').innerHTML = html || "Verifique as semanas no calendário.";
+
+        document.getElementById('monthly-list').innerHTML = html || "Sem dados para este mês.";
     }
 
     renderYearly() {
-        let html = "";
-        for(let w=1; w<=52; w+=4) {
-            html += `<div style="padding:10px; background:#f9fafb; margin-bottom:5px; border-radius:8px;"><strong>Semana ${w} - ${w+3}</strong><br><span style="font-size:0.8rem; color:#666;">Avanço progressivo nos livros</span></div>`;
-        }
+        const year = this.currentDate.getFullYear();
+        let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; padding: 5px;">`;
+        
+        monthNames.forEach((name, i) => {
+            const firstDay = new Date(year, i, 1);
+            const lastDay = new Date(year, i + 1, 0);
+            const wStart = this.getWeekNumber(firstDay);
+            const wEnd = this.getWeekNumber(lastDay);
+            
+            // Calcular progresso do mês
+            const daysInMonth = lastDay.getDate();
+            let readCount = 0;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const checkDate = new Date(year, i, d);
+                if (this.isDateRead(checkDate)) readCount++;
+            }
+            const percent = Math.round((readCount / daysInMonth) * 100);
+            
+            html += `<div style="padding:20px; background:white; border:1px solid #E5E7EB; border-radius:16px; text-align:center; transition: transform 0.2s; cursor:pointer;" onclick="app.jumpToMonth(${i})">
+                <div style="font-size:1.1rem; font-weight:800; color:var(--primary); margin-bottom:8px;">${name}</div>
+                <div style="font-size:0.75rem; color:var(--text-sec); margin-bottom:12px;">Meta: Semanas ${wStart} - ${wEnd}</div>
+                <div style="height:6px; background:#F3F4F6; border-radius:3px; overflow:hidden; position:relative; margin-bottom:5px;">
+                    <div style="width:${percent}%; height:100%; background:var(--success); transition: width 0.3s;"></div>
+                </div>
+                <div style="font-size:0.7rem; font-weight:700; color:var(--success);">${percent}% concluído</div>
+            </div>`;
+        });
+        
+        html += `</div>`;
         document.getElementById('yearly-list').innerHTML = html;
+    }
+
+    jumpToMonth(m) {
+        this.currentDate.setMonth(m);
+        document.getElementById('dateInput').valueAsDate = this.currentDate;
+        this.switchTab('monthly');
+        this.renderAll();
     }
 
     // ==============================================
@@ -601,7 +710,7 @@ class BibleApp {
                 const dReading = this.calculateReading(k, w);
                 
                 html += `<div class="sl-item">
-                    <div class="sl-day">${names[i].substring(0,3)}</div>
+                    <div class="sl-day">${names[i].substring(0,3)}<br><small style="font-size:0.8rem; font-weight:normal; color:#9CA3AF;">${this.formatDateShort(currentDayDate).substring(0,5)}</small></div>
                     <div class="sl-content">
                         <span class="sl-theme">${dReading.theme} (Meta ${w})</span>
                         <div class="sl-reading">${dReading.text}</div>
@@ -624,11 +733,15 @@ class BibleApp {
 
                 html += `<div class="sl-week-group"><div class="sl-week-title">Semana ${w}</div>`;
                 for (let i = 0; i <= 6; i++) {
+                    const currentDayDate = new Date(checkDate);
+                    currentDayDate.setDate(checkDate.getDate() + i);
                     if (w === startWeek && i < this.currentDate.getDay()) continue; 
+                    if (currentDayDate.getMonth() !== month) continue;
+
                     const k = keys[i];
                     const d = this.calculateReading(k, w);
                     html += `<div class="sl-item">
-                        <div class="sl-day">${names[i].substring(0,3)}</div>
+                        <div class="sl-day">${names[i].substring(0,3)}<br><small style="font-size:0.8rem; font-weight:normal; color:#9CA3AF;">${this.formatDateShort(currentDayDate).substring(0,5)}</small></div>
                         <div class="sl-content">
                             <span class="sl-theme">${d.theme}</span>
                             <div class="sl-reading">${d.text}</div>
