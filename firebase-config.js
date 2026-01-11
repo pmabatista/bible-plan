@@ -15,8 +15,7 @@ const FIREBASE_CONFIG = {
 };
 
 // reCAPTCHA v3 Site Key (do Console Firebase → App Check)
-// SUBSTITUA pela sua chave que começa com 6L...
-const RECAPTCHA_SITE_KEY = "6LeCwkYsAAAAAAzi5X_dAIDNdKTD2FrXLaGeuuLS";
+const RECAPTCHA_SITE_KEY = "6LdVzkYsAAAAAJP3IWLoNYRjnyqWTXjnmW_2Jwvc";
 
 // Expõe globalmente para os scripts usarem
 window.FIREBASE_CONFIG = FIREBASE_CONFIG;
