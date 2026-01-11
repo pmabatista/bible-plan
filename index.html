@@ -54,8 +54,46 @@
 <header>
     <div class="top-bar">
         <div class="logo">📖 Bíblia Anual</div>
-        <div id="auth-status" class="auth-status loading">⏳ Carregando...</div>
-        <input type="date" id="dateInput" class="date-picker" onchange="app.updateDate()">
+        <div class="header-right">
+            <div id="user-stats" class="user-stats" onclick="app.toggleProfile()">
+                <div class="user-avatar">👤</div>
+                <div class="user-info">
+                    <div id="user-name" class="user-name">Carregando...</div>
+                    <div id="user-progress" class="user-progress">0 dias</div>
+                </div>
+            </div>
+            <input type="date" id="dateInput" class="date-picker" onchange="app.updateDate()">
+        </div>
+    </div>
+    
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="profile-modal">
+        <div class="profile-content">
+            <div class="profile-header">
+                <div class="profile-avatar-large">👤</div>
+                <div id="profile-name" class="profile-name">Usuário</div>
+                <div id="profile-type" class="profile-type">Modo Anônimo</div>
+            </div>
+            <div class="profile-stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-label">Dias Lidos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-percent">0%</div>
+                    <div class="stat-label">Progresso Anual</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-week">0</div>
+                    <div class="stat-label">Esta Semana</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-streak">0</div>
+                    <div class="stat-label">Sequência</div>
+                </div>
+            </div>
+            <button class="btn-close-profile" onclick="app.toggleProfile()">Fechar</button>
+        </div>
     </div>
     <div class="tabs">
         <button class="tab-btn active" onclick="app.switchTab('daily')">Hoje</button>

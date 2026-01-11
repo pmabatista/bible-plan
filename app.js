@@ -60,9 +60,11 @@ class BibleApp {
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 this.userId = user.uid;
+                this.currentUser = user;
                 this.hideLoginModal();
                 this.showAuthStatus('success', user.isAnonymous ? '✓ Modo Anônimo' : '✓ Logado');
                 await this.loadProgress();
+                this.updateUserProfile();
                 this.renderAll();
             } else {
                 this.showLoginModal();
@@ -70,6 +72,17 @@ class BibleApp {
         });
 
         document.getElementById('dateInput').valueAsDate = this.currentDate;
+        
+        // Fecha profile ao clicar fora
+        document.addEventListener('click', (e) => {
+            const profileModal = document.getElementById('profile-modal');
+            const userStats = document.querySelector('.user-stats');
+            if (profileModal.classList.contains('open') && 
+                !profileModal.contains(e.target) && 
+                !userStats.contains(e.target)) {
+                this.toggleProfile();
+            }
+        });
     }
 
     showLoginModal() {
@@ -101,6 +114,55 @@ class BibleApp {
             console.error('Erro no login anônimo:', error);
             alert('Erro ao continuar. Tente novamente.');
         }
+    }
+
+    toggleProfile() {
+        const modal = document.getElementById('profile-modal');
+        modal.classList.toggle('open');
+    }
+
+    updateUserProfile() {
+        const isAnonymous = this.currentUser?.isAnonymous;
+        const userName = isAnonymous ? 'Visitante' : (this.currentUser?.displayName || 'Usuário');
+        
+        // Header stats
+        document.getElementById('user-name').innerText = userName;
+        document.getElementById('user-progress').innerText = `${this.readDays.size} dias lidos`;
+        
+        // Profile modal
+        document.getElementById('profile-name').innerText = userName;
+        document.getElementById('profile-type').innerText = isAnonymous ? '👤 Modo Anônimo' : '✓ Conectado com Google';
+        
+        // Calcular estatísticas
+        const totalDaysRead = this.readDays.size;
+        const percentYear = Math.round((totalDaysRead / 365) * 100);
+        
+        // Dias lidos esta semana
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        let thisWeekCount = 0;
+        
+        this.readDays.forEach(dateStr => {
+            const date = new Date(dateStr);
+            if (date >= startOfWeek) thisWeekCount++;
+        });
+        
+        // Calcular sequência (streak)
+        let streak = 0;
+        let checkDate = new Date();
+        checkDate.setHours(0, 0, 0, 0);
+        
+        while (this.readDays.has(checkDate.toISOString().split('T')[0])) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        }
+        
+        // Atualizar stats
+        document.getElementById('stat-total').innerText = totalDaysRead;
+        document.getElementById('stat-percent').innerText = `${percentYear}%`;
+        document.getElementById('stat-week').innerText = thisWeekCount;
+        document.getElementById('stat-streak').innerText = streak;
     }
 
     showAuthStatus(status, message) {
@@ -303,6 +365,7 @@ class BibleApp {
         this.renderWeekly();
         this.renderMonthly();
         this.renderYearly();
+        this.updateUserProfile();
     }
 
     async renderDaily() {
@@ -413,32 +476,42 @@ class BibleApp {
 
         content.innerHTML = `<div style="text-align:center; margin-top:50px;"><span class="spinner" style="font-size:2rem;">⏳</span><p>Baixando texto bíblico...</p></div>`;
 
-        let fullHtml = "";
-        
-        for (let ref of this.currentReferences) {
+        // CARREGAR TUDO EM PARALELO! 🚀
+        const fetchPromises = this.currentReferences.map(async (ref) => {
             try {
                 const query = `${ref.book} ${ref.cap}`;
                 const url = `https://bible-api.com/${encodeURIComponent(query)}?translation=almeida`;
                 const res = await fetch(url);
                 const json = await res.json();
                 
-                fullHtml += `<h3>${ref.book} ${ref.cap}</h3>`;
+                let html = `<h3>${ref.book} ${ref.cap}</h3>`;
                 
                 if (json.verses && json.verses.length > 0) {
                     let chapterText = "";
                     json.verses.forEach(v => {
                         chapterText += `<span class="verse-num">${v.verse}</span>${v.text} `;
                     });
-                    fullHtml += `<p>${chapterText}</p>`;
+                    html += `<p>${chapterText}</p>`;
                 } else {
                     const text = json.text.replace(/\n/g, '<br><br>');
-                    fullHtml += `<p>${text}</p>`;
+                    html += `<p>${text}</p>`;
                 }
-
+                
+                return { html, order: this.currentReferences.indexOf(ref) };
             } catch (e) {
-                fullHtml += `<h3>${ref.book} ${ref.cap}</h3><p style="color:red">Erro ao carregar texto.</p>`;
+                return { 
+                    html: `<h3>${ref.book} ${ref.cap}</h3><p style="color:red">Erro ao carregar texto.</p>`,
+                    order: this.currentReferences.indexOf(ref)
+                };
             }
-        }
+        });
+        
+        // Aguarda TODAS as requisições ao mesmo tempo
+        const results = await Promise.all(fetchPromises);
+        
+        // Ordena e monta o HTML
+        results.sort((a, b) => a.order - b.order);
+        const fullHtml = results.map(r => r.html).join('');
 
         content.innerHTML = fullHtml;
         this.currentReadingText = fullHtml; 
