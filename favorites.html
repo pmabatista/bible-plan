@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Versículos Salvos - Verbum AI</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <!-- Fontes -->
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <!-- Firebase -->
+    <script src="firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore-compat.js"></script>
+    
+    <!-- html2pdf.js para exportação PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2e4057",
+                        "accent": "#d4a373",
+                        "cream-bg": "#fdfbf7",
+                        "cream-dark": "#f5f2ea",
+                        "text-main": "#292524",
+                        "paper-border": "#e7e5e4",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"],
+                        "reading": ["Merriweather", "serif"],
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e7e5e4; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d6d3d1; }
+        
+        @keyframes slide-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slide-out {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        .animate-slide-in { animation: slide-in 0.3s ease-out; }
+        
+        .quote-bg {
+            background-image: radial-gradient(circle at top right, rgba(212, 163, 115, 0.05), transparent 70%);
+        }
+    </style>
+</head>
+
+<body class="bg-cream-bg text-text-main font-display antialiased h-screen overflow-hidden flex flex-col">
+    <!-- Progress Bar -->
+    <div class="w-full h-1 bg-stone-200 z-50 flex-shrink-0">
+        <div id="progress-bar" class="h-full bg-accent transition-all duration-300 shadow-[0_0_10px_rgba(212,163,115,0.5)]" style="width: 12%;"></div>
+    </div>
+
+    <div class="flex flex-1 overflow-hidden relative">
+        <!-- Sidebar -->
+        <aside class="hidden xl:flex flex-col w-20 hover:w-64 transition-all duration-300 border-r border-paper-border bg-white/60 backdrop-blur-sm z-30 justify-between group overflow-hidden">
+            <div class="p-4 flex flex-col gap-8">
+                <div class="flex items-center gap-4 pl-1">
+                    <div class="w-10 h-10 rounded-xl bg-primary flex-shrink-0 flex items-center justify-center text-white shadow-md">
+                        <span class="material-symbols-outlined">auto_stories</span>
+                    </div>
+                    <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                        <h1 class="font-reading font-bold text-lg text-primary tracking-tight">Verbum AI</h1>
+                    </div>
+                </div>
+
+                <nav class="space-y-2">
+                    <a class="flex items-center gap-4 px-3 py-3 rounded-lg text-stone-500 hover:bg-white hover:text-primary transition-colors" href="reader.html">
+                        <span class="material-symbols-outlined flex-shrink-0">calendar_month</span>
+                        <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium whitespace-nowrap">Leitura do Dia</span>
+                    </a>
+                    <a class="flex items-center gap-4 px-3 py-3 rounded-lg text-stone-500 hover:bg-white hover:text-primary transition-colors" href="calendar.html">
+                        <span class="material-symbols-outlined flex-shrink-0">grid_view</span>
+                        <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium whitespace-nowrap">Plano Anual</span>
+                    </a>
+                    <a class="flex items-center gap-4 px-3 py-3 rounded-lg text-stone-500 hover:bg-white hover:text-primary transition-colors" href="journal.html">
+                        <span class="material-symbols-outlined flex-shrink-0">edit_note</span>
+                        <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium whitespace-nowrap">Diário</span>
+                    </a>
+                    <a class="flex items-center gap-4 px-3 py-3 rounded-lg bg-cream-dark text-primary border border-stone-100 shadow-sm relative" href="favorites.html">
+                        <span class="material-symbols-outlined flex-shrink-0 fill-current">favorite</span>
+                        <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium whitespace-nowrap">Favoritos</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="p-4 border-t border-stone-100">
+                <div class="flex items-center gap-4 pl-1 cursor-pointer" id="user-profile">
+                    <div id="user-avatar" class="w-10 h-10 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-white shadow-sm">
+                        <span class="material-symbols-outlined">person</span>
+                    </div>
+                    <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap flex flex-col">
+                        <span id="user-name" class="text-sm font-bold text-stone-700">Usuário</span>
+                        <span id="user-plan" class="text-xs text-stone-400">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col relative min-w-0 bg-cream-bg">
+            <!-- Header -->
+            <header class="flex-shrink-0 h-20 border-b border-stone-200/50 bg-cream-bg/95 backdrop-blur flex items-center justify-between px-8 z-20">
+                <div class="flex items-center gap-4">
+                    <button class="xl:hidden p-2 text-stone-500" id="mobile-menu-btn">
+                        <span class="material-symbols-outlined">menu</span>
+                    </button>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-accent uppercase tracking-widest">Biblioteca Pessoal</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl font-reading font-bold text-stone-800">Versículos Salvos</span>
+                            <span class="bg-stone-100 text-stone-500 text-xs px-2 py-0.5 rounded-full font-bold" id="verses-count">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="hidden md:flex relative group">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-stone-400 text-sm group-focus-within:text-primary">search</span>
+                        <input class="pl-9 pr-4 py-2 bg-white border border-stone-200 rounded-full text-sm focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-stone-400 w-64 transition-all" 
+                               placeholder="Buscar nas coleções..." 
+                               type="text"
+                               id="search-verses"/>
+                    </div>
+                    <div class="w-px h-6 bg-stone-200 mx-2 hidden md:block"></div>
+                    <button class="flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 text-stone-600 text-xs uppercase tracking-wide rounded-full font-bold shadow-sm hover:bg-stone-50 hover:border-stone-300 transition-colors" id="filter-btn">
+                        <span class="material-symbols-outlined text-sm">filter_list</span>
+                        Filtros
+                    </button>
+                    <button class="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs uppercase tracking-wide rounded-full font-bold shadow-md hover:bg-[#1e2a3b] transition-colors" id="add-verse-btn">
+                        <span class="material-symbols-outlined text-sm">add</span>
+                        Novo
+                    </button>
+                </div>
+            </header>
+
+            <!-- Filter Tags -->
+            <div class="flex gap-2 mb-8 overflow-x-auto pb-2 px-6 md:px-10 pt-6 scrollbar-hide">
+                <button class="px-4 py-1.5 rounded-full bg-primary text-white text-sm font-medium shadow-sm whitespace-nowrap" data-filter="all">Todos</button>
+                <button class="px-4 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 text-sm font-medium hover:bg-stone-50 whitespace-nowrap hover:border-accent hover:text-accent transition-colors" data-filter="wisdom">Sabedoria</button>
+                <button class="px-4 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 text-sm font-medium hover:bg-stone-50 whitespace-nowrap hover:border-accent hover:text-accent transition-colors" data-filter="gospels">Evangelhos</button>
+                <button class="px-4 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 text-sm font-medium hover:bg-stone-50 whitespace-nowrap hover:border-accent hover:text-accent transition-colors" data-filter="psalms">Salmos</button>
+                <button class="px-4 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 text-sm font-medium hover:bg-stone-50 whitespace-nowrap hover:border-accent hover:text-accent transition-colors" data-filter="prophets">Profetas</button>
+            </div>
+
+            <!-- Verses Grid -->
+            <div class="flex-1 overflow-y-auto px-6 md:px-10 pb-8 scroll-smooth">
+                <div class="columns-1 md:columns-2 xl:columns-3 gap-6 space-y-6 mx-auto max-w-[1600px] pb-20" id="verses-grid">
+                    <p class="text-center text-stone-400 py-20 col-span-full">Carregando versículos...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Verse Modal -->
+    <div id="add-verse-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-reading font-bold text-primary">Adicionar Versículo</h2>
+                <button class="p-2 text-stone-400 hover:text-stone-600" id="close-modal-btn">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 mb-2">Referência</label>
+                    <input type="text" 
+                           class="w-full px-4 py-2 border border-stone-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" 
+                           placeholder="Ex: João 3:16"
+                           id="verse-reference"/>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 mb-2">Texto do Versículo</label>
+                    <textarea class="w-full px-4 py-2 border border-stone-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[120px]" 
+                              placeholder="Digite ou cole o texto do versículo..."
+                              id="verse-text"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 mb-2">Categoria</label>
+                    <select class="w-full px-4 py-2 border border-stone-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" 
+                            id="verse-category">
+                        <option value="wisdom">Sabedoria</option>
+                        <option value="gospels">Evangelhos</option>
+                        <option value="psalms">Salmos</option>
+                        <option value="prophets">Profetas</option>
+                        <option value="letters">Cartas</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 mb-2">Nota (opcional)</label>
+                    <textarea class="w-full px-4 py-2 border border-stone-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" 
+                              placeholder="Adicione uma nota pessoal..."
+                              id="verse-note"></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button class="flex-1 px-6 py-3 bg-stone-100 text-stone-700 rounded-lg font-medium hover:bg-stone-200 transition-colors" id="cancel-modal-btn">
+                        Cancelar
+                    </button>
+                    <button class="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-[#1e2a3b] transition-colors shadow-md" id="save-verse-btn">
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Script -->
+    <script src="favorites-app.js"></script>
+</body>
+</html>
