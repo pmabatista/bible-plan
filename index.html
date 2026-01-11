@@ -27,17 +27,27 @@
     <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-check-compat.js"></script>
     
     <!-- Firebase AI (ES Module) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app-check.js";
         import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-ai.js";
         
         try {
             const aiApp = initializeApp(window.FIREBASE_CONFIG, "ai-app");
+            
+            // App Check com reCAPTCHA v3
+            // SUBSTITUA pela sua Site Key do reCAPTCHA
+            const appCheck = initializeAppCheck(aiApp, {
+                provider: new ReCaptchaV3Provider(window.RECAPTCHA_SITE_KEY),
+                isTokenAutoRefreshEnabled: true
+            });
+            
             const ai = getAI(aiApp, { backend: new GoogleAIBackend() });
             window.geminiModel = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
-            console.log('✅ Firebase AI pronto!');
+            console.log('✅ Firebase AI + App Check prontos!');
         } catch (e) {
             console.warn('⚠️ Firebase AI indisponível:', e.message);
         }
