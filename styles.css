@@ -299,18 +299,36 @@ main { padding: 20px; flex: 1; max-width: 600px; margin: 0 auto; width: 100%; pa
 .reader-modal.open { display: flex; }
 
 .reader-header {
-    padding: 15px 20px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center; background: white;
+    padding: 10px 20px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center; background: white;
 }
-.reader-title { font-weight: 700; font-size: 1.1rem; color: var(--text-main); }
-.btn-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-sec); }
+.reader-title-container { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.reader-title { font-weight: 700; font-size: 1rem; color: var(--text-main); line-height: 1.2; }
+
+.reader-controls { display: flex; gap: 8px; align-items: center; }
+.reader-controls button {
+    background: #F3F4F6; border: 1px solid #E5E7EB; border-radius: 6px; padding: 4px 10px;
+    font-size: 0.8rem; font-weight: 700; cursor: pointer; color: var(--text-main); transition: all 0.2s;
+}
+.reader-controls button:hover { background: #E5E7EB; }
+.reader-controls button:active { transform: scale(0.95); }
 
 .reader-body {
-    flex: 1; overflow-y: auto; padding: 30px 20px;
-    font-family: 'Merriweather', serif; font-size: 1.1rem; line-height: 1.8; color: #374151;
-    max-width: 800px; margin: 0 auto; width: 100%;
+    flex: 1; overflow-y: auto; padding: 40px 24px;
+    font-family: 'Merriweather', serif; font-size: 1.15rem; line-height: 1.8; color: #374151;
+    max-width: 800px; margin: 0 auto; width: 100%; transition: all 0.3s ease;
 }
+
+/* Temas do Leitor */
+.reader-modal.theme-sepia .reader-body { background-color: #F4ECD8; color: #5B4636; }
+.reader-modal.theme-sepia .reader-header, .reader-modal.theme-sepia .reader-footer { background-color: #E8DFCA; border-color: #D6C9AD; }
+
+.reader-modal.theme-dark .reader-body { background-color: #1A1A1A; color: #E0E0E0; }
+.reader-modal.theme-dark .reader-header, .reader-modal.theme-dark .reader-footer { background-color: #2D2D2D; border-color: #3D3D3D; }
+.reader-modal.theme-dark .btn-close, .reader-modal.theme-dark .reader-title { color: #FFFFFF; }
+
 .reader-body h3 { color: var(--primary); margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-.reader-body p { margin-bottom: 20px; text-align: justify; }
+.reader-modal.theme-dark .reader-body h3 { border-color: #3D3D3D; }
+.reader-body p { margin-bottom: 24px; text-align: justify; }
 
 /* Estilo dos Versículos */
 .verse-num {

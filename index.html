@@ -169,7 +169,14 @@
 <!-- READER MODAL -->
 <div id="reader-modal" class="reader-modal">
     <div class="reader-header">
-        <div class="reader-title" id="reader-title">Carregando...</div>
+        <div class="reader-title-container">
+            <div class="reader-title" id="reader-title">Carregando...</div>
+            <div class="reader-controls">
+                <button onclick="app.adjustFontSize(-1)">A-</button>
+                <button onclick="app.adjustFontSize(1)">A+</button>
+                <button id="reader-theme-btn" onclick="app.toggleReaderTheme()" title="Mudar fundo">☀️</button>
+            </div>
+        </div>
         <button class="btn-close" onclick="app.closeReader()">&times;</button>
     </div>
     <div class="reader-body" id="reader-content">

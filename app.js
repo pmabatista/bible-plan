@@ -53,7 +53,9 @@ class BibleApp {
         this.userId = null;
         this.readDays = new Set();
         this.planCache = null;
-        this.bibleCache = new Map(); // Cache para versículos
+        this.bibleCache = new Map();
+        this.readerFontSize = 1.15; // rem
+        this.readerTheme = 'light'; // light, sepia, dark
         this.init();
     }
 
@@ -696,6 +698,33 @@ class BibleApp {
     closeReader() {
         document.getElementById('reader-modal').classList.remove('open');
         document.body.style.overflow = 'auto';
+    }
+
+    adjustFontSize(delta) {
+        this.readerFontSize += delta * 0.1;
+        if (this.readerFontSize < 0.8) this.readerFontSize = 0.8;
+        if (this.readerFontSize > 2.0) this.readerFontSize = 2.0;
+        document.getElementById('reader-content').style.fontSize = `${this.readerFontSize}rem`;
+    }
+
+    toggleReaderTheme() {
+        const modal = document.getElementById('reader-modal');
+        const btn = document.getElementById('reader-theme-btn');
+        
+        modal.classList.remove('theme-sepia', 'theme-dark');
+        
+        if (this.readerTheme === 'light') {
+            this.readerTheme = 'sepia';
+            modal.classList.add('theme-sepia');
+            btn.innerText = '📜';
+        } else if (this.readerTheme === 'sepia') {
+            this.readerTheme = 'dark';
+            modal.classList.add('theme-dark');
+            btn.innerText = '🌙';
+        } else {
+            this.readerTheme = 'light';
+            btn.innerText = '☀️';
+        }
     }
 
     async markTodayAsRead() {
