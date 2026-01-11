@@ -3,7 +3,9 @@
 // ==============================================
 
 // Inicializa Firebase
-firebase.initializeApp(window.FIREBASE_CONFIG);
+if (!firebase.apps.length) {
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+}
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -464,26 +466,62 @@ Evite clichês. Responda APENAS com o texto da reflexão, sem títulos ou marcad
         }
 
         try {
+            // VALIDAÇÃO DEFENSIVA
+            const userId = this.currentUser.uid;
             const today = new Date().toISOString().split('T')[0];
             
-            console.log('Salvando progresso:', {
-                userId: this.currentUser.uid,
-                date: today,
-                reading: this.currentReading.text
+            // Verificar se valores são válidos
+            if (!userId || typeof userId !== 'string' || userId.includes('/')) {
+                throw new Error(`userId inválido: "${userId}"`);
+            }
+            if (!today || typeof today !== 'string' || today.includes('/')) {
+                throw new Error(`readingId inválido: "${today}"`);
+            }
+            
+            // LOGGING DETALHADO PARA DEBUG
+            console.group('🔍 DEBUG: completeReading()');
+            console.log('✅ auth.currentUser.uid:', userId);
+            console.log('✅ readingId (today):', today);
+            console.log('📍 Path completo:', `users/${userId}/progress/${today}`);
+            console.log('� Tipo de auth:', this.currentUser.isAnonymous ? 'ANÔNIMA' : 'GOOGLE');
+            console.log('📧 Email:', this.currentUser.email || 'N/A');
+            console.log('📦 Dados:', {
+                read: true,
+                completed: true,
+                reading: this.currentReading.text,
+                theme: this.currentReading.theme,
+                weekNumber: this.currentReading.weekNumber
             });
             
-            await db.collection('users')
-                .doc(this.currentUser.uid)
+            // Testar token JWT
+            try {
+                const token = await this.currentUser.getIdToken();
+                console.log('🎫 Token JWT obtido:', token.substring(0, 50) + '...');
+            } catch (tokenError) {
+                console.error('❌ Erro ao obter token:', tokenError);
+            }
+            
+            console.groupEnd();
+            
+            // OPERAÇÃO FIREBASE
+            const docRef = db.collection('users')
+                .doc(userId)
                 .collection('progress')
-                .doc(today)
-                .set({
-                    read: true,
-                    completed: true,
-                    reading: this.currentReading.text,
-                    theme: this.currentReading.theme,
-                    weekNumber: this.currentReading.weekNumber,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
+                .doc(today);
+            
+            console.log('🔥 Executando setDoc()...');
+            console.log('📌 DocRef path:', docRef.path);
+            console.log('📌 DocRef id:', docRef.id);
+            console.log('📌 Firestore project:', db.app.options.projectId);
+            
+            await docRef.set({
+                read: true,
+                completed: true,
+                reading: this.currentReading.text,
+                theme: this.currentReading.theme,
+                weekNumber: this.currentReading.weekNumber,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
 
             // Feedback visual
             const btn = document.getElementById('complete-reading-btn');
