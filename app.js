@@ -79,6 +79,9 @@ class BibleApp {
         
         // Verifica se já está logado
         auth.onAuthStateChanged(async (user) => {
+            // Esconde splash screen
+            this.hideSplash();
+            
             if (user) {
                 this.userId = user.uid;
                 this.currentUser = user;
@@ -143,6 +146,16 @@ class BibleApp {
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const y = String(date.getFullYear()).slice(-2);
         return `${d}/${m}/${y}`;
+    }
+
+    hideSplash() {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.classList.add('fade-out');
+            setTimeout(() => {
+                splash.style.display = 'none';
+            }, 300);
+        }
     }
 
     showLoginModal() {
