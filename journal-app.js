@@ -16,19 +16,40 @@ class JournalApp {
     }
 
     async init() {
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                this.currentUser = user;
-                this.updateUserProfile(user);
-                await this.loadNotes();
-                this.setupEditor();
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
+        try {
+            auth.onAuthStateChanged(async (user) => {
+                try {
+                    if (user) {
+                        this.currentUser = user;
+                        this.updateUserProfile(user);
+                        await this.loadNotes();
+                        this.setupEditor();
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                } catch (error) {
+                    console.error('Erro na inicialização do usuário:', error);
+                } finally {
+                    // Garante que a splash screen suma mesmo se houver erro
+                    setTimeout(() => this.hideSplashScreen(), 800);
+                }
+            });
 
-        this.setupEventListeners();
-        this.updateCurrentDate();
+            this.setupEventListeners();
+            this.updateCurrentDate();
+        } catch (error) {
+            console.error('Erro no init:', error);
+            this.hideSplashScreen();
+        }
+    }
+
+    hideSplashScreen() {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.style.opacity = '0';
+            splash.style.pointerEvents = 'none'; // Impede que bloqueie cliques enquanto some
+            setTimeout(() => splash.remove(), 500);
+        }
     }
 
     updateUserProfile(user) {
@@ -36,7 +57,7 @@ class JournalApp {
         const userPlan = document.getElementById('user-plan');
         const userAvatar = document.getElementById('user-avatar');
 
-        if (user.photoURL) {
+        if (user.photoURL && userAvatar) {
             userAvatar.style.backgroundImage = `url('${user.photoURL}')`;
             userAvatar.style.backgroundSize = 'cover';
             userAvatar.innerHTML = '';
@@ -52,13 +73,27 @@ class JournalApp {
     }
 
     updateCurrentDate() {
-        const dateElement = document.getElementById('current-date');
-        const now = new Date();
-        const options = { day: 'numeric', month: 'long', year: 'numeric' };
-        dateElement.textContent = now.toLocaleDateString('pt-BR', options);
+        const dateEl = document.getElementById('current-date');
+        if (dateEl) {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            dateEl.textContent = now.toLocaleDateString('pt-BR', options);
+        }
     }
 
     setupEventListeners() {
+        // Mobile menu
+        document.querySelectorAll('.mobile-menu-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.toggleMobileMenu();
+            });
+        });
+
+        // Mobile overlay
+        document.getElementById('mobile-sidebar-overlay')?.addEventListener('click', () => {
+            this.toggleMobileMenu();
+        });
+
         // New note button
         document.getElementById('new-note-btn')?.addEventListener('click', () => {
             this.createNewNote();
@@ -90,11 +125,59 @@ class JournalApp {
         noteContent?.addEventListener('input', () => {
             this.scheduleAutoSave();
         });
+
+        // Toggle Notes List mobile
+        document.getElementById('toggle-list-btn')?.addEventListener('click', () => {
+            this.toggleNotesSidebar();
+        });
+    }
+
+    toggleNotesSidebar() {
+        const sidebar = document.getElementById('notes-sidebar');
+        if (sidebar) {
+            if (sidebar.classList.contains('hidden')) {
+                sidebar.classList.remove('hidden');
+                sidebar.classList.add('flex', 'fixed', 'inset-0', 'z-[60]', 'bg-[#faf9f6]');
+            } else {
+                sidebar.classList.add('hidden');
+                sidebar.classList.remove('flex', 'fixed', 'inset-0', 'z-[60]', 'bg-[#faf9f6]');
+            }
+        }
+    }
+
+    toggleMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobile-sidebar-overlay');
+
+        if (sidebar && overlay) {
+            const isHidden = sidebar.classList.contains('-translate-x-full');
+            if (isHidden) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                sidebar.classList.remove('translate-x-0');
+                overlay.classList.add('hidden');
+            }
+        }
+    }
+
+    async logout() {
+        if (confirm('Deseja realmente sair?')) {
+            try {
+                await auth.signOut();
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Erro ao fazer logout:', error);
+                alert('Erro ao sair. Tente novamente.');
+            }
+        }
     }
 
     setupEditor() {
         const editor = document.getElementById('note-content');
-        
+
         // Prevenir formatação padrão do navegador
         editor.addEventListener('paste', (e) => {
             e.preventDefault();
@@ -121,7 +204,7 @@ class JournalApp {
             });
 
             this.renderNotesList();
-            
+
             // Carregar primeira nota
             if (this.notes.length > 0) {
                 this.loadNote(this.notes[0]);
@@ -133,26 +216,27 @@ class JournalApp {
         }
     }
 
-    renderNotesList() {
+    renderNotesList(notesToRender = null) {
         const notesList = document.getElementById('notes-list');
-        
-        if (this.notes.length === 0) {
+        const notes = notesToRender || this.notes;
+
+        if (notes.length === 0) {
             notesList.innerHTML = '<p class="text-center text-stone-400 py-10 text-sm">Nenhuma nota ainda. Crie sua primeira reflexão!</p>';
             return;
         }
 
         let html = '';
-        this.notes.forEach((note, index) => {
-            const date = note.updatedAt ? new Date(note.updatedAt.seconds * 1000) : new Date();
+        notes.forEach((note) => {
+            const date = note.updatedAt ? (note.updatedAt.seconds ? new Date(note.updatedAt.seconds * 1000) : new Date(note.updatedAt)) : new Date();
             const dateStr = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
             const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            
+
             const isActive = this.currentNote && this.currentNote.id === note.id;
-            const activeClass = isActive ? 'bg-white' : 'hover:bg-white';
-            const borderClass = isActive ? 'border-l-4 border-accent' : '';
+            const activeClass = isActive ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50';
+            const borderClass = isActive ? 'border-l-4 border-accent' : 'border-l-4 border-transparent';
 
             html += `
-                <div class="p-5 border-b border-paper-border ${activeClass} transition-colors cursor-pointer group ${borderClass}" 
+                <div class="p-5 border-b border-paper-border ${activeClass} transition-all cursor-pointer group ${borderClass}" 
                      data-note-id="${note.id}">
                     <div class="flex justify-between items-start mb-1">
                         <span class="text-[11px] font-bold text-${isActive ? 'primary' : 'stone-400'} uppercase tracking-wider group-hover:text-primary transition-colors">${dateStr}</span>
@@ -169,7 +253,7 @@ class JournalApp {
         notesList.innerHTML = html;
 
         // Adicionar event listeners
-        document.querySelectorAll('[data-note-id]').forEach(el => {
+        notesList.querySelectorAll('[data-note-id]').forEach(el => {
             el.addEventListener('click', () => {
                 const noteId = el.dataset.noteId;
                 const note = this.notes.find(n => n.id === noteId);
@@ -188,11 +272,19 @@ class JournalApp {
 
     loadNote(note) {
         this.currentNote = note;
-        
+
         document.getElementById('note-title').value = note.title || '';
         document.getElementById('note-content').innerHTML = note.content || '<p>Comece a escrever...</p>';
-        
+
         this.renderNotesList(); // Re-render para atualizar a nota ativa
+
+        // No mobile, fecha a lista após selecionar
+        if (window.innerWidth < 768) {
+            const sidebar = document.getElementById('notes-sidebar');
+            if (sidebar && !sidebar.classList.contains('hidden')) {
+                this.toggleNotesSidebar();
+            }
+        }
     }
 
     createNewNote() {
@@ -206,10 +298,10 @@ class JournalApp {
 
         this.notes.unshift(newNote);
         this.currentNote = newNote;
-        
+
         document.getElementById('note-title').value = '';
         document.getElementById('note-content').innerHTML = '<p>Comece a escrever suas reflexões...</p>';
-        
+
         this.renderNotesList();
     }
 
@@ -265,7 +357,7 @@ class JournalApp {
             // Atualizar UI
             document.getElementById('save-status').textContent = 'Salvo';
             document.getElementById('save-status').classList.remove('animate-pulse');
-            
+
             this.renderNotesList();
         } catch (error) {
             console.error('Erro ao salvar nota:', error);
@@ -283,36 +375,12 @@ class JournalApp {
             const title = (note.title || '').toLowerCase();
             const content = this.stripHTML(note.content || '').toLowerCase();
             const searchTerm = query.toLowerCase();
-            
+
             return title.includes(searchTerm) || content.includes(searchTerm);
         });
 
         // Renderizar apenas notas filtradas
         this.renderNotesList(filtered);
-    }
-
-    renderNotesList(notesToRender = null) {
-        const notesList = document.getElementById('notes-list');
-        const notes = notesToRender || this.notes;
-        
-        if (notes.length === 0) {
-            notesList.innerHTML = '<p class="text-sm text-stone-400 text-center py-10">Nenhuma nota encontrada</p>';
-            return;
-        }
-        
-        notesList.innerHTML = notes.map(note => `
-            <div class="note-item ${this.currentNoteId === note.id ? 'active' : ''}" data-note-id="${note.id}">
-                <div class="font-medium text-sm text-stone-700 mb-1 truncate">${note.title}</div>
-                <div class="text-xs text-stone-400">${new Date(note.date).toLocaleDateString('pt-BR')}</div>
-            </div>
-        `).join('');
-        
-        // Re-attach click listeners
-        notesList.querySelectorAll('.note-item').forEach(item => {
-            item.addEventListener('click', () => {
-                this.loadNote(item.dataset.noteId);
-            });
-        });
     }
 }
 

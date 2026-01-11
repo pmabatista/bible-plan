@@ -20,6 +20,9 @@ class FavoritesApp {
                 this.currentUser = user;
                 this.updateUserProfile(user);
                 await this.loadVerses();
+
+                // Esconde a splash screen após carregar os dados
+                setTimeout(() => this.hideSplashScreen(), 800);
             } else {
                 window.location.href = 'index.html';
             }
@@ -28,12 +31,20 @@ class FavoritesApp {
         this.setupEventListeners();
     }
 
+    hideSplashScreen() {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.style.opacity = '0';
+            setTimeout(() => splash.remove(), 500);
+        }
+    }
+
     updateUserProfile(user) {
         const userName = document.getElementById('user-name');
         const userPlan = document.getElementById('user-plan');
         const userAvatar = document.getElementById('user-avatar');
 
-        if (user.photoURL) {
+        if (user.photoURL && userAvatar) {
             userAvatar.style.backgroundImage = `url('${user.photoURL}')`;
             userAvatar.style.backgroundSize = 'cover';
             userAvatar.innerHTML = '';
@@ -49,6 +60,16 @@ class FavoritesApp {
     }
 
     setupEventListeners() {
+        // Mobile menu
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
+            this.toggleMobileMenu();
+        });
+
+        // Mobile overlay
+        document.getElementById('mobile-sidebar-overlay')?.addEventListener('click', () => {
+            this.toggleMobileMenu();
+        });
+
         // Add verse button
         document.getElementById('add-verse-btn')?.addEventListener('click', () => {
             this.showAddModal();
@@ -80,6 +101,36 @@ class FavoritesApp {
         });
     }
 
+    toggleMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobile-sidebar-overlay');
+
+        if (sidebar && overlay) {
+            const isHidden = sidebar.classList.contains('-translate-x-full');
+            if (isHidden) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                sidebar.classList.remove('translate-x-0');
+                overlay.classList.add('hidden');
+            }
+        }
+    }
+
+    async logout() {
+        if (confirm('Deseja realmente sair?')) {
+            try {
+                await auth.signOut();
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Erro ao fazer logout:', error);
+                alert('Erro ao sair. Tente novamente.');
+            }
+        }
+    }
+
     async loadVerses() {
         try {
             const snapshot = await db.collection('users')
@@ -106,14 +157,14 @@ class FavoritesApp {
 
     renderVerses() {
         const grid = document.getElementById('verses-grid');
-        
+
         if (this.verses.length === 0) {
             grid.innerHTML = '<p class="text-center text-stone-400 py-20 col-span-full">Nenhum versículo salvo ainda. Comece sua coleção!</p>';
             return;
         }
 
-        const filtered = this.currentFilter === 'all' ? 
-            this.verses : 
+        const filtered = this.currentFilter === 'all' ?
+            this.verses :
             this.verses.filter(v => v.category === this.currentFilter);
 
         let html = '';
@@ -223,7 +274,7 @@ class FavoritesApp {
 
     setFilter(filter) {
         this.currentFilter = filter;
-        
+
         // Atualizar UI dos botões
         document.querySelectorAll('[data-filter]').forEach(btn => {
             if (btn.dataset.filter === filter) {
@@ -314,7 +365,7 @@ class FavoritesApp {
         if (!verse) return;
 
         const text = `"${verse.text}"\n\n${verse.reference}`;
-        
+
         if (navigator.share) {
             navigator.share({
                 title: verse.reference,
@@ -331,30 +382,56 @@ class FavoritesApp {
         const verse = this.verses.find(v => v.id === verseId);
         if (!verse) return;
 
-        // Criar HTML temporário para PDF
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = `
-            <div style="padding: 40px; font-family: 'Merriweather', serif;">
-                <h1 style="font-size: 24px; color: #2e4057; margin-bottom: 10px; font-family: 'Lexend', sans-serif;">${verse.reference}</h1>
-                <p style="font-size: 18px; line-height: 1.8; color: #292524; margin-bottom: 20px;">${verse.text}</p>
-                ${verse.note ? `<div style="border-left: 4px solid #d4a373; padding-left: 20px; margin-top: 30px;">
-                    <p style="font-size: 14px; color: #57534e; font-style: italic;">${verse.note}</p>
-                </div>` : ''}
-                <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e7e5e4;">
-                    <p style="font-size: 12px; color: #a8a29e; text-align: center;">Gerado por Verbum AI</p>
+        this.showToast('Gerando cartão do versículo...', 'success');
+
+        const htmlString = `
+            <div style="padding: 30mm 20mm; font-family: 'Times New Roman', serif; background: #fffcf9; min-height: 237mm; display: flex; flex-direction: column; justify-content: center; border: 10px solid white;">
+                <div style="text-align: center; margin-bottom: 50px;">
+                    <span style="font-family: Arial, sans-serif; font-size: 10pt; color: #d4a373; font-weight: bold; letter-spacing: 3px;">VERBUM AI</span>
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 40px; position: relative; padding: 0 20px;">
+                    <span style="font-size: 60pt; color: #d4a373; opacity: 0.2; position: absolute; top: -40px; left: 0;">“</span>
+                    <p style="font-size: 24pt; line-height: 1.6; color: #1a1a1a; font-style: italic; margin: 0;">${verse.text}</p>
+                    <span style="font-size: 60pt; color: #d4a373; opacity: 0.2; position: absolute; bottom: -60px; right: 0;">”</span>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <div style="width: 30px; height: 1px; background: #d4a373; margin: 0 auto 20px;"></div>
+                    <h2 style="font-family: Arial, sans-serif; font-size: 16pt; color: #2e4057; margin: 0; text-transform: uppercase; letter-spacing: 1px;">${verse.reference}</h2>
+                </div>
+
+                ${verse.note ? `
+                <div style="margin-top: 50px; padding: 20px; background: white; border: 1px solid #f1f0ec; border-radius: 4px; max-width: 80%; margin-left: auto; margin-right: auto; text-align: center;">
+                    <p style="font-family: Arial, sans-serif; font-size: 9pt; color: #a8a29e; text-transform: uppercase; margin-bottom: 10px;">Minha Nota</p>
+                    <p style="font-size: 12pt; color: #57534e; margin: 0;">${verse.note}</p>
+                </div>
+                ` : ''}
+
+                <div style="position: absolute; bottom: 20mm; left: 0; right: 0; text-align: center; font-family: Arial, sans-serif; font-size: 8pt; color: #aaa;">
+                    BÍBLIA-PLANO.APP • ${new Date().toLocaleDateString('pt-BR')}
                 </div>
             </div>
         `;
 
         const opt = {
-            margin:       10,
-            filename:     `${verse.reference.replace(/\s+/g, '_')}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            margin: 0,
+            filename: `Favorito_${verse.reference.replace(/\s+/g, '_')}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                windowWidth: 700
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
-        html2pdf().set(opt).from(tempDiv).save();
+        html2pdf().set(opt).from(htmlString).save().catch(err => {
+            console.error('PDF Error:', err);
+            this.showError('Erro ao gerar PDF.');
+        });
     }
 
     editVerse(verseId) {
@@ -366,14 +443,14 @@ class FavoritesApp {
         document.getElementById('verse-text').value = verse.text;
         document.getElementById('verse-category').value = verse.category || 'sabedoria';
         document.getElementById('verse-note').value = verse.note || '';
-        
+
         // Mudar comportamento do botão salvar para edição
         const saveBtn = document.getElementById('save-verse-btn');
         saveBtn.textContent = 'Atualizar';
         saveBtn.onclick = async () => {
             await this.updateVerse(verseId);
         };
-        
+
         this.showAddModal();
     }
 
@@ -404,7 +481,7 @@ class FavoritesApp {
             this.hideAddModal();
             await this.loadVerses();
             this.showSuccess('Versículo atualizado com sucesso!');
-            
+
             // Restaurar botão salvar
             const saveBtn = document.getElementById('save-verse-btn');
             saveBtn.textContent = 'Salvar';
@@ -426,10 +503,10 @@ class FavoritesApp {
             const text = verse.text.toLowerCase();
             const note = (verse.note || '').toLowerCase();
             const searchTerm = query.toLowerCase();
-            
-            return reference.includes(searchTerm) || 
-                   text.includes(searchTerm) || 
-                   note.includes(searchTerm);
+
+            return reference.includes(searchTerm) ||
+                text.includes(searchTerm) ||
+                note.includes(searchTerm);
         });
 
         this.renderFilteredVerses(filtered);
@@ -437,14 +514,14 @@ class FavoritesApp {
 
     renderFilteredVerses(filteredVerses) {
         const container = document.getElementById('verses-container');
-        
+
         if (filteredVerses.length === 0) {
             container.innerHTML = '<div class="col-span-full text-center py-20 text-stone-400">Nenhum versículo encontrado</div>';
             return;
         }
-        
+
         container.innerHTML = filteredVerses.map(verse => this.createVerseCard(verse)).join('');
-        
+
         // Re-attach event listeners
         this.attachVerseEventListeners();
     }
@@ -493,7 +570,7 @@ class FavoritesApp {
             <span class="text-sm font-medium">${message}</span>
         `;
         document.body.appendChild(toast);
-        
+
         setTimeout(() => {
             toast.style.animation = 'slide-out 0.3s ease-out';
             setTimeout(() => toast.remove(), 300);

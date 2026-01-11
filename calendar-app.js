@@ -8,13 +8,13 @@ const db = firebase.firestore();
 
 // Dados Bíblicos - Plano de Leitura Anual
 const DB = {
-    domingo: { nome: "Epístolas", livros: [{l:"Romanos", c:16}, {l:"1 Coríntios", c:16}, {l:"2 Coríntios", c:13}, {l:"Gálatas", c:6}, {l:"Efésios", c:6}, {l:"Filipenses", c:4}, {l:"Colossenses", c:4}, {l:"1 Tessalonicenses", c:5}, {l:"2 Tessalonicenses", c:3}, {l:"1 Timóteo", c:6}, {l:"2 Timóteo", c:4}, {l:"Tito", c:3}, {l:"Filemom", c:1}, {l:"Hebreus", c:13}, {l:"Tiago", c:5}, {l:"1 Pedro", c:5}, {l:"2 Pedro", c:3}, {l:"1 João", c:5}, {l:"2 João", c:1}, {l:"3 João", c:1}, {l:"Judas", c:1}] },
-    segunda: { nome: "Pentateuco", livros: [{l:"Gênesis", c:50}, {l:"Êxodo", c:40}, {l:"Levítico", c:27}, {l:"Números", c:36}, {l:"Deuteronômio", c:34}] },
-    terca: { nome: "História", livros: [{l:"Josué", c:24}, {l:"Juízes", c:21}, {l:"Rute", c:4}, {l:"1 Samuel", c:31}, {l:"2 Samuel", c:24}, {l:"1 Reis", c:22}, {l:"2 Reis", c:25}, {l:"1 Crônicas", c:29}, {l:"2 Crônicas", c:36}, {l:"Esdras", c:10}, {l:"Neemias", c:13}, {l:"Ester", c:10}] },
-    quarta: { nome: "Salmos", livros: [{l:"Salmos", c:150}] },
-    quinta: { nome: "Profecia", livros: [{l:"Isaías", c:66}, {l:"Jeremias", c:52}, {l:"Lamentações", c:5}, {l:"Ezequiel", c:48}, {l:"Daniel", c:12}, {l:"Oseias", c:14}, {l:"Joel", c:3}, {l:"Amós", c:9}, {l:"Obadias", c:1}, {l:"Jonas", c:4}, {l:"Miqueias", c:7}, {l:"Naum", c:3}, {l:"Habacuque", c:3}, {l:"Sofonias", c:3}, {l:"Ageu", c:2}, {l:"Zacarias", c:14}, {l:"Malaquias", c:4}, {l:"Apocalipse", c:22}] },
-    sexta: { nome: "Evangelhos", livros: [{l:"Mateus", c:28}, {l:"Marcos", c:16}, {l:"Lucas", c:24}, {l:"João", c:21}, {l:"Atos", c:28}] },
-    sabado: { nome: "Sabedoria", livros: [{l:"Jó", c:42}, {l:"Provérbios", c:31}, {l:"Eclesiastes", c:12}, {l:"Cânticos", c:8}] }
+    domingo: { nome: "Epístolas", livros: [{ l: "Romanos", c: 16 }, { l: "1 Coríntios", c: 16 }, { l: "2 Coríntios", c: 13 }, { l: "Gálatas", c: 6 }, { l: "Efésios", c: 6 }, { l: "Filipenses", c: 4 }, { l: "Colossenses", c: 4 }, { l: "1 Tessalonicenses", c: 5 }, { l: "2 Tessalonicenses", c: 3 }, { l: "1 Timóteo", c: 6 }, { l: "2 Timóteo", c: 4 }, { l: "Tito", c: 3 }, { l: "Filemom", c: 1 }, { l: "Hebreus", c: 13 }, { l: "Tiago", c: 5 }, { l: "1 Pedro", c: 5 }, { l: "2 Pedro", c: 3 }, { l: "1 João", c: 5 }, { l: "2 João", c: 1 }, { l: "3 João", c: 1 }, { l: "Judas", c: 1 }] },
+    segunda: { nome: "Pentateuco", livros: [{ l: "Gênesis", c: 50 }, { l: "Êxodo", c: 40 }, { l: "Levítico", c: 27 }, { l: "Números", c: 36 }, { l: "Deuteronômio", c: 34 }] },
+    terca: { nome: "História", livros: [{ l: "Josué", c: 24 }, { l: "Juízes", c: 21 }, { l: "Rute", c: 4 }, { l: "1 Samuel", c: 31 }, { l: "2 Samuel", c: 24 }, { l: "1 Reis", c: 22 }, { l: "2 Reis", c: 25 }, { l: "1 Crônicas", c: 29 }, { l: "2 Crônicas", c: 36 }, { l: "Esdras", c: 10 }, { l: "Neemias", c: 13 }, { l: "Ester", c: 10 }] },
+    quarta: { nome: "Salmos", livros: [{ l: "Salmos", c: 150 }] },
+    quinta: { nome: "Profecia", livros: [{ l: "Isaías", c: 66 }, { l: "Jeremias", c: 52 }, { l: "Lamentações", c: 5 }, { l: "Ezequiel", c: 48 }, { l: "Daniel", c: 12 }, { l: "Oseias", c: 14 }, { l: "Joel", c: 3 }, { l: "Amós", c: 9 }, { l: "Obadias", c: 1 }, { l: "Jonas", c: 4 }, { l: "Miqueias", c: 7 }, { l: "Naum", c: 3 }, { l: "Habacuque", c: 3 }, { l: "Sofonias", c: 3 }, { l: "Ageu", c: 2 }, { l: "Zacarias", c: 14 }, { l: "Malaquias", c: 4 }, { l: "Apocalipse", c: 22 }] },
+    sexta: { nome: "Evangelhos", livros: [{ l: "Mateus", c: 28 }, { l: "Marcos", c: 16 }, { l: "Lucas", c: 24 }, { l: "João", c: 21 }, { l: "Atos", c: 28 }] },
+    sabado: { nome: "Sabedoria", livros: [{ l: "Jó", c: 42 }, { l: "Provérbios", c: 31 }, { l: "Eclesiastes", c: 12 }, { l: "Cânticos", c: 8 }] }
 };
 
 const keys = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
@@ -83,13 +83,13 @@ class CalendarApp {
         const rate = totalCap / 52;
         const start = Math.floor((semanaNum - 1) * rate) + 1;
         const end = Math.floor(semanaNum * rate);
-        
+
         const realEnd = end > totalCap ? totalCap : end;
         const realStart = start > totalCap ? totalCap : start;
         const isFinished = realEnd >= totalCap;
 
         const result = this.convertCap(categoria.livros, realStart, realEnd);
-        
+
         return {
             text: result.text,
             references: result.references,
@@ -100,12 +100,12 @@ class CalendarApp {
 
     convertCap(livros, inicio, fim) {
         if (inicio > fim) return { text: "Concluído!", references: [] };
-        
+
         let txtIni = "";
         let fullRefs = [];
         let currentGlobalCap = inicio;
-        
-        while(currentGlobalCap <= fim) {
+
+        while (currentGlobalCap <= fim) {
             let accumulatedCaps = 0;
             for (let l of livros) {
                 if (currentGlobalCap > accumulatedCaps && currentGlobalCap <= accumulatedCaps + l.c) {
@@ -134,7 +134,7 @@ class CalendarApp {
                 let cFim = fim - accumulatedCaps;
                 if (txtIni.includes(l.l)) {
                     let cIni = parseInt(txtIni.split(" ").pop());
-                    if(cIni !== cFim) txtIni += `-${cFim}`;
+                    if (cIni !== cFim) txtIni += `-${cFim}`;
                 } else {
                     txtIni += ` a ${l.l} ${cFim}`;
                 }
@@ -142,7 +142,7 @@ class CalendarApp {
             }
             accumulatedCaps += l.c;
         }
-        
+
         return { text: txtIni, references: fullRefs };
     }
 
@@ -160,10 +160,55 @@ class CalendarApp {
                 this.updateUserProfile(user);
                 await this.loadUserProgress();
                 this.renderCalendar();
+
+                // Esconde a splash screen após carregar os dados
+                setTimeout(() => this.hideSplashScreen(), 800);
             } else {
                 window.location.href = 'index.html';
             }
         });
+
+        this.setupEventListeners();
+    }
+
+    hideSplashScreen() {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.style.opacity = '0';
+            setTimeout(() => splash.remove(), 500);
+        }
+    }
+
+    setupEventListeners() {
+        // Mobile menu
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
+            this.toggleMobileMenu();
+        });
+
+        // Mobile overlay
+        document.getElementById('mobile-sidebar-overlay')?.addEventListener('click', () => {
+            this.toggleMobileMenu();
+        });
+    }
+
+    toggleMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobile-sidebar-overlay');
+
+        if (sidebar && overlay) {
+            const isHidden = sidebar.classList.contains('-translate-x-full');
+            if (isHidden) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                sidebar.classList.remove('translate-x-0');
+                overlay.classList.add('hidden');
+            }
+        } else {
+            console.warn('Sidebar ou Overlay não encontrado');
+        }
     }
 
     updateUserProfile(user) {
@@ -197,7 +242,7 @@ class CalendarApp {
 
         try {
             console.log('Carregando progresso do usuário:', this.currentUser.uid);
-            
+
             db.collection('users')
                 .doc(this.currentUser.uid)
                 .collection('progress')
@@ -209,15 +254,17 @@ class CalendarApp {
                     });
 
                     console.log(`✅ ${this.readDays.size} dias lidos carregados do Firebase`);
-                    
+
                     this.calculateStats();
                     this.updateStatsUI();
+                    this.renderCalendar();
+                    this.renderUpcomingReadings(); // Novo: renderiza a barra lateral direita
                 }, (error) => {
                     console.error('Erro ao carregar progresso:', error);
                     this.calculateStats();
                     this.updateStatsUI();
                 });
-                
+
         } catch (error) {
             console.error('Erro ao carregar progresso:', error);
             this.calculateStats();
@@ -228,17 +275,17 @@ class CalendarApp {
     calculateStats() {
         this.stats.chapters = this.readDays.size;
         this.stats.percentage = Math.round((this.readDays.size / 365) * 100);
-        
+
         // Calcular sequência (streak) - começa de hoje e volta no tempo
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         let streak = 0;
-        
+
         for (let i = 0; i < 365; i++) {
             const checkDate = new Date(today);
             checkDate.setDate(today.getDate() - i);
             const dateStr = checkDate.toISOString().split('T')[0];
-            
+
             if (this.readDays.has(dateStr)) {
                 streak++;
             } else {
@@ -272,7 +319,7 @@ class CalendarApp {
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth();
         const currentDay = new Date().getDate();
-        
+
         // Atualiza o título com o ano atual
         const titleEl = document.getElementById('calendar-title');
         if (titleEl) {
@@ -290,12 +337,12 @@ class CalendarApp {
             // Status do mês
             let monthStatus = '';
             let monthClass = '';
-            
+
             if (isPastMonth) {
                 // Verificar se foi completado
                 const allDaysRead = this.isMonthComplete(currentYear, month);
-                monthStatus = allDaysRead ? 
-                    '<span class="text-[10px] text-green-500 bg-green-50 px-2 py-0.5 rounded-full">Completo</span>' : 
+                monthStatus = allDaysRead ?
+                    '<span class="text-[10px] text-green-500 bg-green-50 px-2 py-0.5 rounded-full">Completo</span>' :
                     '<span class="text-[10px] text-stone-400 bg-stone-50 px-2 py-0.5 rounded-full">Parcial</span>';
                 monthClass = allDaysRead ? 'shadow-sm' : 'opacity-80';
             } else if (isCurrentMonth) {
@@ -333,7 +380,7 @@ class CalendarApp {
             const isRead = this.readDays.has(dateStr);
             const isToday = isCurrentMonth && day === currentDay;
             const isFuture = date > new Date();
-            
+
             // Busca a leitura do dia
             const reading = this.getReadingForDate(date);
             const dayOfWeek = dayNames[date.getDay()];
@@ -374,7 +421,7 @@ class CalendarApp {
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(year, month, day);
             const dateStr = date.toISOString().split('T')[0];
-            
+
             if (this.readDays.has(dateStr)) {
                 completedDays++;
             }
@@ -411,7 +458,7 @@ class CalendarApp {
         const isRead = this.readDays.has(dateStr);
         const reading = this.getReadingForDate(date);
         const dayOfWeek = dayNames[date.getDay()];
-        
+
         const modalHtml = `
             <div id="day-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" style="animation: fadeIn 0.2s ease-out;">
                 <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative" style="animation: slideUp 0.3s ease-out;">
@@ -439,7 +486,7 @@ class CalendarApp {
                     </div>
                     
                     <div class="flex gap-3">
-                        <button onclick="window.location.href='reader.html'" class="flex-1 bg-primary text-white px-4 py-3 rounded-lg hover:bg-primary/90 transition-colors font-display font-semibold">
+                        <button onclick="window.location.href='reader.html?date=${dateStr}'" class="flex-1 bg-primary text-white px-4 py-3 rounded-lg hover:bg-primary/90 transition-colors font-display font-semibold">
                             📖 Ler Agora
                         </button>
                         <button onclick="document.getElementById('day-modal').remove()" class="px-4 py-3 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors">
@@ -449,12 +496,103 @@ class CalendarApp {
                 </div>
             </div>
         `;
-        
+
         // Remove modal anterior se existir
         document.getElementById('day-modal')?.remove();
-        
+
         // Adiciona novo modal
         document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    renderUpcomingReadings() {
+        const container = document.getElementById('upcoming-readings');
+        if (!container) return;
+
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        let html = '';
+
+        // 1. Renderiza "Hoje"
+        const todayReading = this.getReadingForDate(today);
+        const todayStr = today.toISOString().split('T')[0];
+        const isTodayRead = this.readDays.has(todayStr);
+        const dayOfMonth = today.getDate();
+        const monthShort = today.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+
+        html += `
+            <div class="relative">
+                <div class="absolute -left-6 top-3 w-1 h-8 bg-primary rounded-r"></div>
+                <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3 pl-1">Hoje • ${dayOfMonth} ${monthShort}</p>
+                <div class="bg-white p-5 rounded-xl border ${isTodayRead ? 'border-green-100 bg-green-50/20' : 'border-stone-200 shadow-md'} group hover:border-primary/30 transition-all cursor-pointer" onclick="window.location.href='reader.html'">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="px-2 py-1 rounded ${this.getCategoryColor(today.getDay())} text-[10px] font-bold uppercase tracking-wider">${keys[today.getDay()]} • ${todayReading.theme}</span>
+                        <span class="material-symbols-outlined ${isTodayRead ? 'text-green-500' : 'text-stone-300 group-hover:text-primary'} transition-colors">
+                            ${isTodayRead ? 'check_circle' : 'play_circle'}
+                        </span>
+                    </div>
+                    <h3 class="font-reading font-bold text-stone-800 text-lg mb-1">${todayReading.text}</h3>
+                    <p class="text-xs text-stone-500 line-clamp-2 leading-relaxed">
+                        ${isTodayRead ? 'Leitura concluída! Ótimo trabalho.' : 'Inicie sua jornada espiritual de hoje.'}
+                    </p>
+                </div>
+            </div>
+        `;
+
+        // 2. Renderiza "Esta Semana" (próximos 6 dias)
+        html += `
+            <div>
+                <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3 pl-1">Próximos Dias</p>
+                <div class="space-y-3">
+        `;
+
+        for (let i = 1; i <= 6; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            const dateStr = date.toISOString().split('T')[0];
+            const reading = this.getReadingForDate(date);
+            const isRead = this.readDays.has(dateStr);
+            const dayName = dayNames[date.getDay()];
+            const dayNum = date.getDate();
+
+            html += `
+                <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-white border border-transparent hover:border-stone-100 transition-all group cursor-pointer" onclick="calendarApp.showDayDetails('${dateStr}')">
+                    <div class="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-stone-100 text-stone-500 group-hover:bg-accent/10 group-hover:text-accent transition-colors">
+                        <span class="text-[9px] font-bold uppercase">${dayName}</span>
+                        <span class="text-sm font-bold">${dayNum}</span>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <h4 class="text-sm font-bold text-stone-700">${reading.theme}</h4>
+                            ${isRead ? '<span class="material-symbols-outlined text-green-500 text-xs text-xs font-bold">check_circle</span>' : ''}
+                        </div>
+                        <p class="text-xs text-stone-500">${reading.text}</p>
+                    </div>
+                    <span class="material-symbols-outlined text-stone-300 text-sm">chevron_right</span>
+                </div>
+            `;
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    getCategoryColor(dayIndex) {
+        const colors = [
+            'bg-teal-50 text-teal-700',   // Domingo
+            'bg-blue-50 text-blue-700',   // Segunda
+            'bg-orange-50 text-orange-700', // Terça
+            'bg-purple-50 text-purple-700', // Quarta
+            'bg-pink-50 text-pink-700',    // Quinta
+            'bg-yellow-50 text-yellow-700', // Sexta
+            'bg-stone-50 text-stone-700'   // Sábado
+        ];
+        return colors[dayIndex] || 'bg-stone-50 text-stone-700';
     }
 }
 
