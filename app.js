@@ -53,6 +53,7 @@ class BibleApp {
         this.userId = null;
         this.readDays = new Set();
         this.planCache = null;
+        this.bibleCache = new Map(); // Cache para versículos
         this.init();
     }
 
@@ -417,6 +418,44 @@ class BibleApp {
         return { text: txtIni, references: fullRefs };
     }
 
+    // ==============================================
+    // API BÍBLIA - HELPER COM CACHE E SEGURANÇA
+    // ==============================================
+    async fetchFromBibleAPI(book, cap) {
+        const query = `${book} ${cap}`;
+        const cacheKey = `almeida_${query.toLowerCase().replace(/\s+/g, '_')}`;
+        
+        // 1. Tenta Cache em Memória
+        if (this.bibleCache.has(cacheKey)) return this.bibleCache.get(cacheKey);
+        
+        // 2. Tenta Cache no LocalStorage (persistente entre reloads)
+        const saved = localStorage.getItem(cacheKey);
+        if (saved) {
+            const data = JSON.parse(saved);
+            this.bibleCache.set(cacheKey, data);
+            return data;
+        }
+
+        try {
+            // Documentação sugere single_chapter_book_matching=indifferent para evitar erro em Jude 1, etc.
+            const url = `https://bible-api.com/${encodeURIComponent(query)}?translation=almeida&single_chapter_book_matching=indifferent`;
+            
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            const data = await response.json();
+            
+            // Salvar no cache (Memória e LocalStorage)
+            this.bibleCache.set(cacheKey, data);
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+            
+            return data;
+        } catch (error) {
+            console.error(`Erro ao buscar ${query}:`, error);
+            return null;
+        }
+    }
+
     async fetchReadingTime(references) {
         const badge = document.getElementById('reading-timer');
         const icon = document.getElementById('timer-icon');
@@ -426,15 +465,11 @@ class BibleApp {
         text.innerText = "Calculando...";
         let totalWords = 0;
         const promises = references.map(async (ref) => {
-            try {
-                const query = `${ref.book} ${ref.cap}`;
-                const url = `https://bible-api.com/${encodeURIComponent(query)}?translation=almeida`;
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("API Error");
-                const json = await response.json();
-                if (!json.text) throw new Error("No text");
+            const json = await this.fetchFromBibleAPI(ref.book, ref.cap);
+            if (json && json.text) {
                 return json.text.split(/\s+/).length;
-            } catch (e) { return 250; }
+            }
+            return 250; // Fallback médio por capítulo
         });
         const results = await Promise.all(promises);
         totalWords = results.reduce((a, b) => a + b, 0);
@@ -625,37 +660,29 @@ class BibleApp {
 
         content.innerHTML = `<div style="text-align:center; margin-top:50px;"><span class="spinner" style="font-size:2rem;">⏳</span><p>Baixando texto bíblico...</p></div>`;
 
-        // CARREGAR TUDO EM PARALELO! 🚀
-        const fetchPromises = this.currentReferences.map(async (ref) => {
-            try {
-                const query = `${ref.book} ${ref.cap}`;
-                const url = `https://bible-api.com/${encodeURIComponent(query)}?translation=almeida`;
-                const res = await fetch(url);
-                const json = await res.json();
-                
-                let html = `<h3>${ref.book} ${ref.cap}</h3>`;
-                
-                if (json.verses && json.verses.length > 0) {
-                    let chapterText = "";
-                    json.verses.forEach(v => {
-                        chapterText += `<span class="verse-num">${v.verse}</span>${v.text} `;
-                    });
-                    html += `<p>${chapterText}</p>`;
-                } else {
-                    const text = json.text.replace(/\n/g, '<br><br>');
-                    html += `<p>${text}</p>`;
-                }
-                
-                return { html, order: this.currentReferences.indexOf(ref) };
-            } catch (e) {
-                return { 
-                    html: `<h3>${ref.book} ${ref.cap}</h3><p style="color:red">Erro ao carregar texto.</p>`,
-                    order: this.currentReferences.indexOf(ref)
-                };
+        // CARREGA TODOS OS CAPÍTULOS USANDO O HELPER COM CACHE
+        const fetchPromises = this.currentReferences.map(async (ref, index) => {
+            const json = await this.fetchFromBibleAPI(ref.book, ref.cap);
+            
+            let html = `<h3>${ref.book} ${ref.cap}</h3>`;
+            
+            if (json && json.verses && json.verses.length > 0) {
+                let chapterText = "";
+                json.verses.forEach(v => {
+                    chapterText += `<span class="verse-num">${v.verse}</span>${v.text} `;
+                });
+                html += `<p>${chapterText}</p>`;
+            } else if (json && json.text) {
+                const text = json.text.replace(/\n/g, '<br><br>');
+                html += `<p>${text}</p>`;
+            } else {
+                html += `<p style="color:red">Não foi possível carregar o texto de ${ref.book} ${ref.cap}. Verifique sua conexão.</p>`;
             }
+            
+            return { html, order: index };
         });
         
-        // Aguarda TODAS as requisições ao mesmo tempo
+        // Aguarda TODAS as requisições (muitas virão do cache instantaneamente)
         const results = await Promise.all(fetchPromises);
         
         // Ordena e monta o HTML
