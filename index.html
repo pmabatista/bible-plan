@@ -52,18 +52,22 @@
     <!-- Firebase AI (ES Module) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app-check.js";
+        // import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app-check.js";
         import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-ai.js";
         
         try {
             const aiApp = initializeApp(window.FIREBASE_CONFIG, "ai-app");
             
-            // App Check com reCAPTCHA v3
-            // SUBSTITUA pela sua Site Key do reCAPTCHA
+            // App Check DESABILITADO temporariamente
+            // Para reabilitar: descomentar import e código abaixo
+            // Configurar no Firebase Console: App Check → Add app → reCAPTCHA v3
+            // Registrar domínio: bible-plan-production.up.railway.app
+            /*
             const appCheck = initializeAppCheck(aiApp, {
                 provider: new ReCaptchaV3Provider(window.RECAPTCHA_SITE_KEY),
                 isTokenAutoRefreshEnabled: true
             });
+            */
             
             const ai = getAI(aiApp, { backend: new GoogleAIBackend() });
             window.geminiModel = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
