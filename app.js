@@ -24,15 +24,27 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Inicializa Firebase AI (Gemini)
-let ai = null;
+// Firebase AI será inicializado quando o módulo carregar
 let geminiModel = null;
-try {
-    ai = firebase.ai();
-    geminiModel = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
-    console.log('✅ Firebase AI inicializado com sucesso!');
-} catch (e) {
-    console.warn('⚠️ Firebase AI não disponível. Ative no Console do Firebase.');
+
+function initFirebaseAI() {
+    if (window.firebaseAI) {
+        try {
+            const { getAI, getGenerativeModel, GoogleAIBackend } = window.firebaseAI;
+            const ai = getAI(firebase.app(), { backend: new GoogleAIBackend() });
+            geminiModel = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
+            console.log('✅ Firebase AI inicializado com sucesso!');
+        } catch (e) {
+            console.warn('⚠️ Erro ao inicializar Firebase AI:', e.message);
+        }
+    }
+}
+
+// Tenta inicializar imediatamente ou aguarda o evento
+if (window.firebaseAIReady) {
+    initFirebaseAI();
+} else {
+    window.addEventListener('firebaseAIReady', initFirebaseAI);
 }
 
 // ==============================================
