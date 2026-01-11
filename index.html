@@ -60,6 +60,7 @@
                 <div class="user-info">
                     <div id="user-name" class="user-name">Carregando...</div>
                     <div id="user-progress" class="user-progress">0 dias</div>
+                    <div id="auth-status" class="auth-status" style="display:none"></div>
                 </div>
             </div>
             <input type="date" id="dateInput" class="date-picker" onchange="app.updateDate()">
@@ -92,7 +93,10 @@
                     <div class="stat-label">Sequência</div>
                 </div>
             </div>
-            <button class="btn-close-profile" onclick="app.toggleProfile()">Fechar</button>
+            <div class="profile-actions" style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn-logout" onclick="app.logout()" style="flex: 1; padding: 10px; background: #FEE2E2; color: #DC2626; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Sair</button>
+                <button class="btn-close-profile" onclick="app.toggleProfile()" style="flex: 1; padding: 10px; background: #F3F4F6; color: var(--text-main); border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Fechar</button>
+            </div>
         </div>
     </div>
     <div class="tabs">

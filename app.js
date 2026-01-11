@@ -158,6 +158,31 @@ class BibleApp {
         }
     }
 
+    async logout() {
+        try {
+            // Efeito de fade out suave
+            document.body.classList.add('logging-out');
+            
+            setTimeout(async () => {
+                await auth.signOut();
+                this.toggleProfile(); // Fecha o modal
+                this.readDays.clear();
+                
+                // Limpa states e volta ao início
+                this.userId = null;
+                this.currentUser = null;
+                
+                // Remove classe e o onAuthStateChanged cuidará de mostrar o login
+                document.body.classList.remove('logging-out');
+                this.renderAll();
+            }, 300);
+            
+        } catch (error) {
+            console.error('Erro ao sair:', error);
+            document.body.classList.remove('logging-out');
+        }
+    }
+
     toggleProfile() {
         const modal = document.getElementById('profile-modal');
         modal.classList.toggle('open');
@@ -166,10 +191,23 @@ class BibleApp {
     updateUserProfile() {
         const isAnonymous = this.currentUser?.isAnonymous;
         const userName = isAnonymous ? 'Visitante' : (this.currentUser?.displayName || 'Usuário');
+        const photoURL = this.currentUser?.photoURL;
         
         // Header stats
         document.getElementById('user-name').innerText = userName;
         document.getElementById('user-progress').innerText = `${this.readDays.size} dias lidos`;
+        
+        // Update Avatars
+        const avatarEl = document.querySelector('.user-avatar');
+        const profileAvatarEl = document.querySelector('.profile-avatar-large');
+        
+        if (photoURL) {
+            avatarEl.innerHTML = `<img src="${photoURL}" alt="${userName}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+            profileAvatarEl.innerHTML = `<img src="${photoURL}" alt="${userName}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+        } else {
+            avatarEl.innerText = '👤';
+            profileAvatarEl.innerText = '👤';
+        }
         
         // Profile modal
         document.getElementById('profile-name').innerText = userName;
@@ -209,6 +247,8 @@ class BibleApp {
 
     showAuthStatus(status, message) {
         const statusEl = document.getElementById('auth-status');
+        if (!statusEl) return;
+        statusEl.style.display = 'flex';
         statusEl.className = `auth-status ${status}`;
         statusEl.innerText = message;
     }
