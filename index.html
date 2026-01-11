@@ -12,19 +12,36 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
-    <!-- Firebase SDK v12.7 (Compat) -->
+    <!-- Firebase SDK v12.7 (Compat para Auth/Firestore) -->
     <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore-compat.js"></script>
     
-    <!-- Firebase AI (ES Module) -->
+    <!-- Firebase AI (ES Module - inicialização completa) -->
     <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
         import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-ai.js";
         
-        // Expõe globalmente para o app.js usar
-        window.firebaseAI = { getAI, getGenerativeModel, GoogleAIBackend };
-        window.firebaseAIReady = true;
-        window.dispatchEvent(new Event('firebaseAIReady'));
+        // Mesma config do app.js
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7uLzC11ekDHjx9Gw14Cx2R4h9I8hyGJ4",
+            authDomain: "bible-plan-95825.firebaseapp.com",
+            projectId: "bible-plan-95825",
+            storageBucket: "bible-plan-95825.firebasestorage.app",
+            messagingSenderId: "788106777338",
+            appId: "1:788106777338:web:9f19d40a7f45e6ec9f6f43"
+        };
+        
+        try {
+            // Inicializa app modular separado só para AI
+            const aiApp = initializeApp(firebaseConfig, "ai-app");
+            const ai = getAI(aiApp, { backend: new GoogleAIBackend() });
+            window.geminiModel = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
+            console.log('✅ Firebase AI inicializado com sucesso!');
+        } catch (e) {
+            console.warn('⚠️ Erro ao inicializar Firebase AI:', e.message);
+            console.warn('Detalhes:', e);
+        }
     </script>
     
     <!-- CSS -->

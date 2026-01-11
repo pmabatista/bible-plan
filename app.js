@@ -19,33 +19,13 @@ const firebaseConfig = {
 };
 
 
-// Inicializa Firebase
+// Inicializa Firebase (compat - para Auth e Firestore)
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Firebase AI será inicializado quando o módulo carregar
-let geminiModel = null;
-
-function initFirebaseAI() {
-    if (window.firebaseAI) {
-        try {
-            const { getAI, getGenerativeModel, GoogleAIBackend } = window.firebaseAI;
-            const ai = getAI(firebase.app(), { backend: new GoogleAIBackend() });
-            geminiModel = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
-            console.log('✅ Firebase AI inicializado com sucesso!');
-        } catch (e) {
-            console.warn('⚠️ Erro ao inicializar Firebase AI:', e.message);
-        }
-    }
-}
-
-// Tenta inicializar imediatamente ou aguarda o evento
-if (window.firebaseAIReady) {
-    initFirebaseAI();
-} else {
-    window.addEventListener('firebaseAIReady', initFirebaseAI);
-}
+// Firebase AI é inicializado no index.html via ES Module
+// O modelo fica disponível em window.geminiModel
 
 // ==============================================
 // DADOS BÍBLICOS
@@ -865,8 +845,9 @@ class BibleApp {
         const metaEl = document.getElementById('reflection-meta');
         const refreshBtn = document.getElementById('refresh-reflection-btn');
         
-        // Verifica se o Firebase AI está disponível
-        if (!geminiModel) {
+        // Verifica se o Firebase AI está disponível (usa variável global do módulo ES)
+        const model = window.geminiModel;
+        if (!model) {
             contentEl.innerHTML = `
                 <div class="reflection-error">
                     <span>⚠️</span>
@@ -933,7 +914,7 @@ Estrutura:
 Tom: Acolhedor, esperançoso, prático. Evite clichês religiosos.
 Responda APENAS com a reflexão, sem títulos ou formatação markdown.`;
 
-            const result = await geminiModel.generateContent(prompt);
+            const result = await model.generateContent(prompt);
             const text = result.response.text();
             
             const reflectionData = {
