@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Dashboard - Verbum AI</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Fontes -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+
+    <!-- Firebase Config -->
+    <script src="firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore-compat.js"></script>
+
+    <!-- Libs Externas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Scripts de Gamificação -->
+    <script src="gamification.js"></script>
+    <script src="immersive-ui.js"></script>
+    <script src="social-features.js"></script>
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2e4057",
+                        "accent": "#d4a373",
+                        "cream-bg": "#fdfbf7",
+                        "cream-dark": "#f5f2ea",
+                        "text-main": "#292524",
+                        "paper-border": "#e7e5e4",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"],
+                        "reading": ["Merriweather", "serif"],
+                    },
+                },
+            },
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #e7e5e4;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d6d3d1;
+        }
+
+        @keyframes slide-in {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slide-out {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        .animate-slide-in {
+            animation: slide-in 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .stat-card {
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-cream-bg text-text-main font-display antialiased h-screen overflow-hidden flex flex-col dark:bg-[#121212] dark:text-stone-300">
+    
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen"
+        class="fixed inset-0 bg-gradient-to-br from-primary to-stone-800 flex items-center justify-center z-[100] transition-opacity duration-500">
+        <div class="text-center">
+            <div
+                class="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm animate-pulse">
+                <span class="material-symbols-outlined text-5xl text-white">auto_stories</span>
+            </div>
+            <h1 class="text-3xl font-reading font-bold text-white mb-2">Verbum AI</h1>
+            <div class="w-8 h-8 border-2 border-white/30 border-t-white rounded-full mx-auto animate-spin"></div>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="w-full h-1 bg-stone-200 z-50 flex-shrink-0">
+        <div id="progress-bar"
+            class="h-full bg-accent transition-all duration-300 shadow-[0_0_10px_rgba(212,163,115,0.5)]"
+            style="width: 12%;"></div>
+    </div>
+
+    <div class="flex flex-1 overflow-hidden relative">
+        <!-- Mobile Sidebar Overlay -->
+        <div id="mobile-sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 xl:hidden hidden"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar"
+            class="fixed xl:static xl:flex flex-col w-64 xl:w-20 xl:hover:w-64 transition-all duration-300 border-r border-paper-border bg-white backdrop-blur-sm z-50 xl:z-30 justify-between group overflow-hidden h-full -translate-x-full xl:translate-x-0 dark:bg-stone-900 dark:border-stone-800">
+            <div class="p-4 flex flex-col gap-8">
+                <div class="flex items-center gap-4 pl-1">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-primary flex-shrink-0 flex items-center justify-center text-white shadow-md">
+                        <span class="material-symbols-outlined">auto_stories</span>
+                    </div>
+                    <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                        <h1 class="font-reading font-bold text-lg text-primary tracking-tight dark:text-accent">Verbum
+                            AI</h1>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="space-y-2">
+                    <a class="flex items-center gap-4 px-3 py-3 rounded-lg text-stone-500 hover:bg-white hover:text-primary transition-colors dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-accent"
+                        href="reader.html">
+                        <span class="material-symbols-outlined flex-shrink-0">calendar_month</span>
+                        <span
+                            class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium whitespace-nowrap">Leitura
+                            do Dia</span>
+                    </a>
+                    <a class="flex items-center gap-4 px-3 py-3 rounded-lg bg-cream-dark text-primary border border-stone-100 shadow-sm relative dark:bg-stone-800 dark:text-accent dark:border-stone-700"
+                        href="dashboard.html">
+                        <span class="material-symbols-outlined flex-shrink-0">dashboard</span>
+                        <span
+                            class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium whitespace-nowrap">Dashboard</span>
+                    </a>
+                    <a class="flex items-center gap-4 px-3 py-3 rounded-lg text-stone-500 hover:bg-white hover:text-primary transition-colors dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-accent"
+                        href="calendar.html">
+                        <span class="material-symbols-outlined flex-shrink-0">grid_view</span>
+                        <span
+                            class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium whitespace-nowrap">Plano
+                            Anual</span>
+                    </a>
+                    <a class="flex items-center gap-4 px-3 py-3 rounded-lg text-stone-500 hover:bg-white hover:text-primary transition-colors dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-accent"
+                        href="journal.html">
+                        <span class="material-symbols-outlined flex-shrink-0">edit_note</span>
+                        <span
+                            class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium whitespace-nowrap">Diário</span>
+                    </a>
+                    <a class="flex items-center gap-4 px-3 py-3 rounded-lg text-stone-500 hover:bg-white hover:text-primary transition-colors dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-accent"
+                        href="favorites.html">
+                        <span class="material-symbols-outlined flex-shrink-0">favorite</span>
+                        <span
+                            class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium whitespace-nowrap">Favoritos</span>
+                    </a>
+                </nav>
+            </div>
+
+            <!-- User Profile -->
+            <div class="p-4 border-t border-stone-100 dark:border-stone-800">
+                <div class="flex items-center gap-4 pl-1 cursor-pointer" id="user-profile">
+                    <div id="user-avatar"
+                        class="w-10 h-10 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-white shadow-sm">
+                        <span class="material-symbols-outlined">person</span>
+                    </div>
+                    <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                        <div id="user-name" class="text-sm font-medium text-stone-700 dark:text-stone-200">Carregando...
+                        </div>
+                        <div id="user-email" class="text-xs text-stone-500 dark:text-stone-400">...</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col relative min-w-0 bg-cream-bg dark:bg-[#121212]">
+            <!-- Header -->
+            <header
+                class="flex-shrink-0 h-16 border-b border-stone-200/50 bg-cream-bg/95 backdrop-blur flex items-center justify-between px-8 z-20 dark:bg-stone-900/95 dark:border-stone-800">
+                <div class="flex items-center gap-4">
+                    <button class="xl:hidden p-2 text-stone-500" id="mobile-menu-btn">
+                        <span class="material-symbols-outlined">menu</span>
+                    </button>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-accent uppercase tracking-widest">Dashboard Gamificado</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-reading font-bold text-stone-700 dark:text-stone-200">Meu Progresso</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1">
+                    <!-- Elementos de Gamificação no Header -->
+                    <div class="hidden md:flex items-center gap-3 mr-4">
+                        <div class="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-lg dark:bg-blue-900/20">
+                            <span class="material-symbols-outlined text-blue-600 text-sm">stars</span>
+                            <span class="points-display text-xs font-bold text-blue-600">0</span>
+                        </div>
+                        <div class="flex items-center gap-1 px-2 py-1 bg-red-50 rounded-lg dark:bg-red-900/20">
+                            <span class="streak-display text-xs font-bold text-red-600">🔥 0</span>
+                        </div>
+                        <div class="level-display text-xs font-medium text-stone-600 dark:text-stone-300">🌱 Iniciante</div>
+                    </div>
+                    
+                    <button
+                        class="p-2 rounded-lg text-stone-400 hover:text-primary hover:bg-stone-100 transition-colors dark:hover:bg-stone-800"
+                        id="theme-toggle" title="Modo Noturno">
+                        <span
+                            class="material-symbols-outlined transition-transform duration-300 active:rotate-180">dark_mode</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="flex-1 overflow-y-auto p-8">
+                
+                <!-- Stats Overview -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 fade-in">
+                    <!-- Pontos -->
+                    <div class="stat-card bg-white rounded-xl p-6 border border-paper-border shadow-sm dark:bg-stone-900 dark:border-stone-800">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center dark:bg-blue-900/20">
+                                <span class="material-symbols-outlined text-blue-600">stars</span>
+                            </div>
+                            <span id="points-display-card" class="text-2xl font-bold text-stone-900 dark:text-stone-100">0</span>
+                        </div>
+                        <h3 class="text-stone-600 text-sm font-medium dark:text-stone-400">Pontos Totais</h3>
+                        <div id="points-progress" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- Sequência -->
+                    <div class="stat-card bg-white rounded-xl p-6 border border-paper-border shadow-sm dark:bg-stone-900 dark:border-stone-800">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center dark:bg-red-900/20">
+                                <span class="material-symbols-outlined text-red-600">local_fire_department</span>
+                            </div>
+                            <span id="streak-display-card" class="text-2xl font-bold text-stone-900 dark:text-stone-100">0</span>
+                        </div>
+                        <h3 class="text-stone-600 text-sm font-medium dark:text-stone-400">Dias Seguidos</h3>
+                        <p id="streak-subtitle" class="text-xs text-stone-500 mt-1 dark:text-stone-500">Continue lendo!</p>
+                    </div>
+                    
+                    <!-- Capítulos -->
+                    <div class="stat-card bg-white rounded-xl p-6 border border-paper-border shadow-sm dark:bg-stone-900 dark:border-stone-800">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center dark:bg-green-900/20">
+                                <span class="material-symbols-outlined text-green-600">menu_book</span>
+                            </div>
+                            <span id="chapters-display-card" class="text-2xl font-bold text-stone-900 dark:text-stone-100">0</span>
+                        </div>
+                        <h3 class="text-stone-600 text-sm font-medium dark:text-stone-400">Capítulos Lidos</h3>
+                        <p id="chapters-subtitle" class="text-xs text-stone-500 mt-1 dark:text-stone-500">Meta: 365</p>
+                    </div>
+                    
+                    <!-- Nível -->
+                    <div class="stat-card bg-white rounded-xl p-6 border border-paper-border shadow-sm dark:bg-stone-900 dark:border-stone-800">
+                        <div class="flex items-center justify-between mb-4">
+                            <div id="level-icon-card" class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-2xl dark:bg-purple-900/20">
+                                🌱
+                            </div>
+                            <span id="level-display-card" class="text-2xl font-bold text-stone-900 dark:text-stone-100">1</span>
+                        </div>
+                        <h3 class="text-stone-600 text-sm font-medium dark:text-stone-400">Nível Atual</h3>
+                        <div id="level-progress" class="mt-2"></div>
+                    </div>
+                </div>
+                
+                <!-- Main Dashboard Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <!-- Left Column -->
+                    <div class="lg:col-span-2 space-y-8">
+                        
+                        <!-- Conquistas Recentes -->
+                        <div class="bg-white rounded-xl p-6 border border-paper-border shadow-sm dark:bg-stone-900 dark:border-stone-800 fade-in">
+                            <div class="flex items-center justify-between mb-6">
+                                <h2 class="text-xl font-semibold text-stone-900 dark:text-stone-100">🏆 Conquistas Recentes</h2>
+                                <button id="view-all-achievements" class="text-primary text-sm font-medium hover:underline dark:text-accent">
+                                    Ver todas
+                                </button>
+                            </div>
+                            <div id="recent-achievements" class="space-y-3">
+                                <!-- Conquistas serão inseridas aqui -->
+                            </div>
+                        </div>
+                        
+                        <!-- Progresso dos Livros -->
+                        <div class="bg-white rounded-xl p-6 border border-paper-border shadow-sm dark:bg-stone-900 dark:border-stone-800 fade-in">
+                            <h2 class="text-xl font-semibold text-stone-900 mb-6 dark:text-stone-100">📚 Progresso dos Livros</h2>
+                            <div id="books-progress" class="space-y-4">
+                                <!-- Progresso dos livros será inserido aqui -->
+                            </div>
+                        </div>
+                        
+                        <!-- Desafios Ativos -->
+                        <div class="bg-white rounded-xl p-6 border border-paper-border shadow-sm dark:bg-stone-900 dark:border-stone-800 fade-in">
+                            <div class="flex items-center justify-between mb-6">
+                                <h2 class="text-xl font-semibold text-stone-900 dark:text-stone-100">⚔️ Desafios Ativos</h2>
+                                <button id="create-challenge" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors dark:bg-accent dark:text-stone-900">
+                                    Criar Desafio
+                                </button>
+                            </div>
+                            <div id="active-challenges" class="space-y-4">
+                                <!-- Desafios serão inseridos aqui -->
+                            </div>
+                        </div>
+                        
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div class="space-y-8">
+                        
+                        <!-- Leitura de Hoje -->
+                        <div class="bg-gradient-to-br from-primary to-primary/80 text-white rounded-xl p-6 fade-in">
+                            <h2 class="text-lg font-semibold mb-4">📖 Leitura de Hoje</h2>
+                            <div id="today-reading" class="space-y-3">
+                                <!-- Leitura de hoje será inserida aqui -->
+                            </div>
+                            <button id="start-reading" class="w-full bg-white/20 hover:bg-white/30 text-white font-medium py-3 rounded-xl mt-4 transition-colors">
+                                Começar Leitura
+                            </button>
+                        </div>
+                        
+                        <!-- Grupos -->
+                        <div class="bg-white rounded-xl p-6 border border-paper-border shadow-sm dark:bg-stone-900 dark:border-stone-800 fade-in">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-lg font-semibold text-stone-900 dark:text-stone-100">👥 Meus Grupos</h2>
+                                <div class="flex gap-2">
+                                    <button id="join-group" class="text-primary text-sm font-medium hover:underline dark:text-accent" title="Entrar em grupo">
+                                        Entrar
+                                    </button>
+                                    <span class="text-stone-300">|</span>
+                                    <button id="create-group" class="text-primary text-sm font-medium hover:underline dark:text-accent">
+                                        Criar Grupo
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="user-groups" class="space-y-3">
+                                <!-- Grupos serão inseridos aqui -->
+                            </div>
+                        </div>
+                        
+                        <!-- Compartilhamento -->
+                        <div class="bg-white rounded-xl p-6 border border-paper-border shadow-sm dark:bg-stone-900 dark:border-stone-800 fade-in">
+                            <h2 class="text-lg font-semibold text-stone-900 mb-4 dark:text-stone-100">📤 Compartilhar</h2>
+                            <div class="space-y-3">
+                                <button id="share-progress" class="w-full bg-cream-dark hover:bg-stone-200 text-stone-700 font-medium py-3 rounded-xl transition-colors dark:bg-stone-800 dark:hover:bg-stone-700 dark:text-stone-200">
+                                    Meu Progresso
+                                </button>
+                                <button id="share-achievement" class="w-full bg-cream-dark hover:bg-stone-200 text-stone-700 font-medium py-3 rounded-xl transition-colors dark:bg-stone-800 dark:hover:bg-stone-700 dark:text-stone-200">
+                                    Última Conquista
+                                </button>
+                                <button id="share-verse" class="w-full bg-cream-dark hover:bg-stone-200 text-stone-700 font-medium py-3 rounded-xl transition-colors dark:bg-stone-800 dark:hover:bg-stone-700 dark:text-stone-200">
+                                    Versículo do Dia
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Estatísticas Rápidas -->
+                        <div class="bg-white rounded-xl p-6 border border-paper-border shadow-sm dark:bg-stone-900 dark:border-stone-800 fade-in">
+                            <h2 class="text-lg font-semibold text-stone-900 mb-4 dark:text-stone-100">📊 Estatísticas</h2>
+                            <div id="quick-stats" class="space-y-3">
+                                <!-- Estatísticas serão inseridas aqui -->
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modais -->
+
+    <!-- Modal de Conquistas -->
+    <div id="achievements-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-paper-border dark:bg-stone-900 dark:border-stone-800">
+                <div class="p-6 border-b border-stone-200 dark:border-stone-800">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-semibold text-stone-900 dark:text-stone-100">🏆 Todas as Conquistas</h2>
+                        <button id="close-achievements" class="text-stone-400 hover:text-stone-600 dark:hover:text-stone-300">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6 overflow-y-auto max-h-[60vh]">
+                    <div id="all-achievements" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Todas as conquistas serão inseridas aqui -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Criar Grupo -->
+    <div id="create-group-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl max-w-md w-full border border-paper-border dark:bg-stone-900 dark:border-stone-800">
+                <div class="p-6 border-b border-stone-200 dark:border-stone-800">
+                    <h2 class="text-xl font-semibold text-stone-900 dark:text-stone-100">👥 Criar Grupo</h2>
+                </div>
+                <form id="group-form" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Nome do Grupo</label>
+                        <input type="text" id="group-name" class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-stone-800 dark:border-stone-700 dark:text-stone-200" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Tipo</label>
+                        <select id="group-type" class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-stone-800 dark:border-stone-700 dark:text-stone-200">
+                            <option value="family">👨‍👩‍👧‍👦 Família</option>
+                            <option value="church">⛪ Igreja</option>
+                            <option value="friends">👥 Amigos</option>
+                            <option value="study">📚 Estudo Bíblico</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Descrição</label>
+                        <textarea id="group-description" class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-stone-800 dark:border-stone-700 dark:text-stone-200" rows="3"></textarea>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="group-public" class="rounded border-stone-300 text-primary focus:ring-primary">
+                        <label for="group-public" class="ml-2 text-sm text-stone-700 dark:text-stone-300">Grupo público</label>
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" id="cancel-group" class="flex-1 px-4 py-2 text-stone-600 border border-stone-300 rounded-lg hover:bg-stone-50 dark:text-stone-400 dark:border-stone-700 dark:hover:bg-stone-800">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 dark:bg-accent dark:text-stone-900">
+                            Criar Grupo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Criar Desafio -->
+    <div id="create-challenge-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl max-w-md w-full border border-paper-border dark:bg-stone-900 dark:border-stone-800">
+                <div class="p-6 border-b border-stone-200 dark:border-stone-800">
+                    <h2 class="text-xl font-semibold text-stone-900 dark:text-stone-100">⚔️ Criar Desafio</h2>
+                </div>
+                <form id="challenge-form" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Nome do Desafio</label>
+                        <input type="text" id="challenge-name" class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-stone-800 dark:border-stone-700 dark:text-stone-200" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Tipo</label>
+                        <select id="challenge-type" class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-stone-800 dark:border-stone-700 dark:text-stone-200">
+                            <option value="weekly_reading">📅 Leitura Semanal</option>
+                            <option value="streak_challenge">🔥 Desafio da Sequência</option>
+                            <option value="book_race">🏃‍♂️ Corrida do Livro</option>
+                            <option value="group_goal">🎯 Meta do Grupo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Descrição</label>
+                        <textarea id="challenge-description" class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-stone-800 dark:border-stone-700 dark:text-stone-200" rows="3"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Duração (dias)</label>
+                        <input type="number" id="challenge-duration" value="7" min="1" max="365" class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-stone-800 dark:border-stone-700 dark:text-stone-200">
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" id="cancel-challenge" class="flex-1 px-4 py-2 text-stone-600 border border-stone-300 rounded-lg hover:bg-stone-50 dark:text-stone-400 dark:border-stone-700 dark:hover:bg-stone-800">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 dark:bg-accent dark:text-stone-900">
+                            Criar Desafio
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard-app.js"></script>
+</body>
+</html>

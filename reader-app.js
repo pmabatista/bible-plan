@@ -31,8 +31,32 @@ class ReaderApp {
         this.theme = 'light';
         this.bibleCache = new Map(); // Cache em memória para API
         this.planCache = null;
+        this.activeHubTab = 'ai';
+        this.hubJournalNotes = [];
+        this.currentHubNote = null;
+        this.journalSaveTimeout = null;
         this.initCache();
+        this.loadTheme();
         this.init();
+    }
+
+    loadTheme() {
+        this.theme = localStorage.getItem('theme') || 'light';
+        const html = document.documentElement;
+        const themeBtn = document.getElementById('theme-toggle');
+        const icon = themeBtn?.querySelector('.material-symbols-outlined');
+
+        if (this.theme === 'dark') {
+            html.classList.remove('light');
+            html.classList.add('dark');
+            if (icon) icon.textContent = 'light_mode';
+            if (themeBtn) themeBtn.title = 'Modo Claro';
+        } else {
+            html.classList.add('light');
+            html.classList.remove('dark');
+            if (icon) icon.textContent = 'dark_mode';
+            if (themeBtn) themeBtn.title = 'Modo Noturno';
+        }
     }
 
     initCache() {
@@ -162,8 +186,13 @@ class ReaderApp {
             if (user) {
                 this.currentUser = user;
                 this.updateUserProfile(user);
+                
+                // 🎮 Inicializa sistema de gamificação
+                await this.initializeGamification();
+                
                 await this.loadTodayReading();
                 this.setupEventListeners();
+                this.initHub();
 
                 // Esconde a splash screen após carregar os dados
                 setTimeout(() => this.hideSplashScreen(), 800);
@@ -172,6 +201,18 @@ class ReaderApp {
                 window.location.href = 'index.html';
             }
         });
+    }
+
+    // 🎮 Inicializa sistema de gamificação
+    async initializeGamification() {
+        try {
+            if (window.gamificationSystem && this.currentUser) {
+                await window.gamificationSystem.loadUserData(this.currentUser.uid);
+                this.updateGamificationUI();
+            }
+        } catch (error) {
+            console.error('Erro ao inicializar gamificação:', error);
+        }
     }
 
     hideSplashScreen() {
@@ -207,6 +248,24 @@ class ReaderApp {
         document.getElementById('mobile-sidebar-overlay')?.addEventListener('click', () => {
             this.toggleMobileMenu();
         });
+
+        // Hub Tab Listeners
+        ['ai', 'journal', 'plan'].forEach(tab => {
+            document.getElementById(`tab-${tab}`)?.addEventListener('click', () => this.switchHubTab(tab));
+        });
+
+        // Journal Hub Events
+        document.getElementById('new-journal-btn')?.addEventListener('click', () => this.createNewHubNote());
+        document.getElementById('back-to-journal-list')?.addEventListener('click', () => this.toggleHubJournalEditor(false));
+        document.getElementById('save-journal-btn')?.addEventListener('click', () => this.saveHubNote());
+        document.getElementById('delete-journal-btn')?.addEventListener('click', () => this.deleteHubNote());
+        document.getElementById('journal-search')?.addEventListener('input', (e) => this.filterHubJournal(e.target.value));
+
+        document.getElementById('note-title-input')?.addEventListener('input', () => this.scheduleHubJournalAutoSave());
+        document.getElementById('note-body-content')?.addEventListener('input', () => this.scheduleHubJournalAutoSave());
+
+        // Plan Toggle
+        document.getElementById('toggle-full-plan')?.addEventListener('click', () => this.toggleFullPlanView());
     }
 
     toggleMobileMenu() {
@@ -507,7 +566,7 @@ Evite clichês. Responda APENAS com o texto da reflexão, sem títulos ou marcad
         ).join('');
 
         return `
-            <div class="bg-white p-6 rounded-xl border border-stone-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div class="bg-white p-6 rounded-xl border border-stone-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300 dark:bg-stone-900 dark:border-stone-800">
                 <div class="absolute top-0 left-0 w-1 h-full bg-accent"></div>
                 <div class="flex items-center justify-between mb-4">
                     <span class="px-2 py-1 rounded bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
@@ -521,7 +580,7 @@ Evite clichês. Responda APENAS com o texto da reflexão, sem títulos ou marcad
 
     getDefaultInsights() {
         return `
-            <div class="bg-white p-6 rounded-xl border border-stone-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div class="bg-white p-6 rounded-xl border border-stone-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300 dark:bg-stone-900 dark:border-stone-800">
                 <div class="absolute top-0 left-0 w-1 h-full bg-accent"></div>
                 <div class="flex items-center justify-between mb-4">
                     <span class="px-2 py-1 rounded bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
@@ -539,14 +598,21 @@ Evite clichês. Responda APENAS com o texto da reflexão, sem títulos ou marcad
 
     toggleTheme() {
         const html = document.documentElement;
-        const currentTheme = html.classList.contains('dark') ? 'dark' : 'light';
+        this.theme = html.classList.contains('dark') ? 'light' : 'dark';
 
-        if (currentTheme === 'light') {
+        const themeBtn = document.getElementById('theme-toggle');
+        const icon = themeBtn?.querySelector('.material-symbols-outlined');
+
+        if (this.theme === 'dark') {
+            html.classList.remove('light');
             html.classList.add('dark');
-            this.theme = 'dark';
+            if (icon) icon.textContent = 'light_mode';
+            if (themeBtn) themeBtn.title = 'Modo Claro';
         } else {
+            html.classList.add('light');
             html.classList.remove('dark');
-            this.theme = 'light';
+            if (icon) icon.textContent = 'dark_mode';
+            if (themeBtn) themeBtn.title = 'Modo Noturno';
         }
 
         // Salvar preferência
@@ -592,6 +658,9 @@ Evite clichês. Responda APENAS com o texto da reflexão, sem títulos ou marcad
             this.updateProgressUI();
 
             if (newState) {
+                // 🎮 GAMIFICAÇÃO: Processa a leitura completa
+                await this.processGamificationReward();
+                
                 this.showSuccess('Leitura marcada como concluída! 🎉');
             } else {
                 this.showSuccess('Leitura marcada como não concluída.');
@@ -599,6 +668,195 @@ Evite clichês. Responda APENAS com o texto da reflexão, sem títulos ou marcad
         } catch (error) {
             console.error('Erro ao marcar leitura:', error);
             this.showError('Erro ao salvar progresso: ' + error.message);
+        }
+    }
+
+    // 🎮 Processa recompensas de gamificação
+    async processGamificationReward() {
+        try {
+            // Carrega dados de gamificação se ainda não carregados
+            if (!window.gamificationSystem) return;
+            
+            await window.gamificationSystem.loadUserData(this.currentUser.uid);
+            
+            // Calcula dados da leitura
+            const readingData = await this.calculateReadingData();
+            
+            // Processa a leitura no sistema de gamificação
+            const result = await window.gamificationSystem.processReading(this.currentUser.uid, readingData);
+            
+            // Mostra animações e notificações
+            this.showGamificationRewards(result);
+            
+        } catch (error) {
+            console.error('Erro ao processar gamificação:', error);
+        }
+    }
+
+    // Calcula dados da leitura atual
+    async calculateReadingData() {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        // Verifica se leu ontem para calcular streak
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        let isStreak = false;
+        
+        try {
+            const yesterdayDoc = await db.collection('users')
+                .doc(this.currentUser.uid)
+                .collection('progress')
+                .doc(yesterdayStr)
+                .get();
+            
+            isStreak = yesterdayDoc.exists && yesterdayDoc.data().read;
+        } catch (error) {
+            console.error('Erro ao verificar streak:', error);
+        }
+        
+        // Calcula capítulos lidos (estimativa baseada no texto)
+        const bibleText = document.getElementById('bible-text')?.textContent || '';
+        const estimatedChapters = Math.max(1, Math.floor(bibleText.length / 3000)); // ~3000 chars por capítulo
+        
+        // Verifica se completou um livro
+        const bookCompleted = this.checkIfBookCompleted();
+        
+        return {
+            chaptersRead: estimatedChapters,
+            isStreak: isStreak,
+            bookCompleted: bookCompleted,
+            hour: today.getHours(),
+            dayOfWeek: today.getDay(),
+            streak: isStreak ? window.gamificationSystem.streak + 1 : 1
+        };
+    }
+
+    // Verifica se completou um livro
+    async checkIfBookCompleted() {
+        try {
+            const today = new Date();
+            const dayKey = keys[today.getDay()];
+            const dayData = DB[dayKey];
+            
+            if (!dayData) return false;
+            
+            // Para cada livro do dia, verifica se foi completado
+            for (const book of dayData.livros) {
+                const bookProgress = await this.calculateRealBookProgress(book.l);
+                if (bookProgress >= 100) {
+                    return true;
+                }
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('Erro ao verificar livro completo:', error);
+            return false;
+        }
+    }
+
+    // Calcula progresso real do livro baseado no Firebase
+    async calculateRealBookProgress(bookName) {
+        try {
+            const userId = this.currentUser.uid;
+            
+            // Busca todas as leituras do usuário
+            const progressDocs = await db.collection('users')
+                .doc(userId)
+                .collection('progress')
+                .where('read', '==', true)
+                .get();
+            
+            let chaptersRead = 0;
+            const totalChapters = this.getTotalChaptersForBook(bookName);
+            
+            progressDocs.forEach(doc => {
+                const data = doc.data();
+                if (data.reading && data.reading.includes(bookName)) {
+                    chaptersRead++;
+                }
+            });
+            
+            return Math.min((chaptersRead / totalChapters) * 100, 100);
+        } catch (error) {
+            console.error('Erro ao calcular progresso do livro:', error);
+            return 0;
+        }
+    }
+
+    // Retorna total de capítulos de um livro
+    getTotalChaptersForBook(bookName) {
+        for (const dayKey of keys) {
+            const dayData = DB[dayKey];
+            const book = dayData.livros.find(b => b.l === bookName);
+            if (book) {
+                return book.c;
+            }
+        }
+        return 1; // Fallback
+    }
+
+    // Mostra recompensas de gamificação
+    showGamificationRewards(result) {
+        const completeBtn = document.getElementById('complete-reading-btn');
+        
+        // Anima ganho de pontos
+        if (result.points.total > 0) {
+            window.immersiveUI.animations.pointsGain(
+                completeBtn, 
+                result.points.base, 
+                result.points.bonus
+            );
+        }
+        
+        // Anima conquistas
+        if (result.achievements && result.achievements.length > 0) {
+            result.achievements.forEach((achievement, index) => {
+                setTimeout(() => {
+                    window.immersiveUI.animations.achievement(achievement);
+                }, index * 1000);
+            });
+        }
+        
+        // Anima level up
+        if (result.levelUp && result.levelUp.current) {
+            setTimeout(() => {
+                window.immersiveUI.animations.levelUp(result.levelUp.current);
+            }, 2000);
+        }
+        
+        // Anima streak
+        if (result.points.bonus > 0) {
+            window.immersiveUI.animations.streak(window.gamificationSystem.streak);
+        }
+        
+        // Atualiza UI com novos dados
+        this.updateGamificationUI();
+    }
+
+    // Atualiza UI de gamificação
+    updateGamificationUI() {
+        if (!window.gamificationSystem) return;
+        
+        const displayData = window.gamificationSystem.getDisplayData();
+        
+        // Atualiza pontos no header (se existir)
+        const pointsDisplay = document.querySelector('.points-display');
+        if (pointsDisplay) {
+            pointsDisplay.textContent = displayData.points.toLocaleString();
+        }
+        
+        // Atualiza streak no header (se existir)
+        const streakDisplay = document.querySelector('.streak-display');
+        if (streakDisplay) {
+            streakDisplay.innerHTML = `🔥 ${displayData.streak}`;
+        }
+        
+        // Atualiza nível no header (se existir)
+        const levelDisplay = document.querySelector('.level-display');
+        if (levelDisplay) {
+            levelDisplay.innerHTML = `${displayData.level.icon} ${displayData.level.name}`;
         }
     }
 
@@ -693,6 +951,330 @@ Evite clichês. Responda APENAS com o texto da reflexão, sem títulos ou marcad
         }
     }
 
+    // ==============================================
+    // INTERACTION HUB - INTEGRATED JOURNEY
+    // ==============================================
+
+    async initHub() {
+        this.loadHubJournal();
+        this.updateHubPlanProgress();
+        this.renderHubMiniPlan();
+    }
+
+    switchHubTab(tabId) {
+        this.activeHubTab = tabId;
+
+        // Update Buttons
+        ['ai', 'journal', 'plan'].forEach(t => {
+            const btn = document.getElementById(`tab-${t}`);
+            const content = document.getElementById(`content-${t}`);
+            const indicator = btn?.querySelector('.tab-indicator');
+
+            if (t === tabId) {
+                btn?.classList.add('text-accent');
+                btn?.classList.remove('text-stone-400');
+                content?.classList.remove('hidden');
+                indicator?.classList.add('bg-accent');
+                indicator?.classList.remove('bg-transparent');
+            } else {
+                btn?.classList.remove('text-accent');
+                btn?.classList.add('text-stone-400');
+                content?.classList.add('hidden');
+                indicator?.classList.remove('bg-accent');
+                indicator?.classList.add('bg-transparent');
+            }
+        });
+    }
+
+    // --- Journal Hub Logic ---
+    async loadHubJournal() {
+        if (!this.currentUser) return;
+        try {
+            const snapshot = await db.collection('users').doc(this.currentUser.uid)
+                .collection('journal').orderBy('updatedAt', 'desc').limit(20).get();
+
+            this.hubJournalNotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            this.renderHubJournalList();
+        } catch (error) {
+            console.error('Error loading hub journal:', error);
+        }
+    }
+
+    renderHubJournalList(filteredNotes = null) {
+        const container = document.getElementById('journal-list');
+        if (!container) return;
+
+        const notes = filteredNotes || this.hubJournalNotes;
+        if (notes.length === 0) {
+            container.innerHTML = `<p class="text-center text-stone-400 py-10 text-xs">Nenhuma reflexão ainda.</p>`;
+            return;
+        }
+
+        container.innerHTML = notes.map(note => `
+            <div class="p-4 bg-white rounded-xl border border-stone-100 shadow-sm cursor-pointer hover:border-accent transition-colors dark:bg-stone-800 dark:border-stone-700" 
+                 onclick="app.loadHubNoteById('${note.id}')">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[9px] font-bold text-accent uppercase">${new Date(note.updatedAt?.seconds * 1000 || Date.now()).toLocaleDateString('pt-BR')}</span>
+                </div>
+                <h4 class="text-xs font-bold text-stone-700 dark:text-stone-200 truncate">${note.title || 'Sem título'}</h4>
+                <p class="text-[10px] text-stone-500 line-clamp-2 mt-1">${this.stripHTML(note.content || '')}</p>
+            </div>
+        `).join('');
+    }
+
+    loadHubNoteById(id) {
+        const note = this.hubJournalNotes.find(n => n.id === id);
+        if (note) {
+            this.currentHubNote = note;
+            document.getElementById('note-title-input').value = note.title || '';
+            document.getElementById('note-body-content').innerHTML = note.content || '';
+            this.toggleHubJournalEditor(true);
+        }
+    }
+
+    toggleHubJournalEditor(show) {
+        const list = document.getElementById('journal-list');
+        const editor = document.getElementById('journal-editor');
+        const header = document.querySelector('#content-journal .p-6.border-b');
+
+        if (show) {
+            list.classList.add('hidden');
+            header?.classList.add('hidden');
+            editor.classList.remove('hidden');
+        } else {
+            list.classList.remove('hidden');
+            header?.classList.remove('hidden');
+            editor.classList.add('hidden');
+            this.currentHubNote = null;
+        }
+    }
+
+    createNewHubNote() {
+        this.currentHubNote = { id: Date.now().toString(), title: '', content: '' };
+        document.getElementById('note-title-input').value = '';
+        document.getElementById('note-body-content').innerHTML = '';
+        this.toggleHubJournalEditor(true);
+    }
+
+    scheduleHubJournalAutoSave() {
+        const status = document.getElementById('journal-save-status');
+        if (status) status.textContent = 'Digitando...';
+
+        if (this.journalSaveTimeout) clearTimeout(this.journalSaveTimeout);
+        this.journalSaveTimeout = setTimeout(() => this.saveHubNote(), 2000);
+    }
+
+    async saveHubNote() {
+        if (!this.currentHubNote || !this.currentUser) return;
+
+        const title = document.getElementById('note-title-input').value || 'Sem título';
+        const content = document.getElementById('note-body-content').innerHTML;
+        const status = document.getElementById('journal-save-status');
+
+        if (status) status.textContent = 'Salvando...';
+
+        try {
+            await db.collection('users').doc(this.currentUser.uid).collection('journal').doc(this.currentHubNote.id).set({
+                title, content, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            if (status) status.textContent = 'Salvo';
+            this.loadHubJournal(); // Refresh list in background
+        } catch (error) {
+            console.error('Error saving hub note:', error);
+            if (status) status.textContent = 'Erro ao salvar';
+        }
+    }
+
+    async deleteHubNote() {
+        if (!this.currentHubNote || !this.currentUser) return;
+
+        if (!confirm('Deseja realmente excluir esta reflexão?')) return;
+
+        try {
+            await db.collection('users').doc(this.currentUser.uid).collection('journal').doc(this.currentHubNote.id).delete();
+            this.showSuccess('Reflexão excluída com sucesso!');
+            this.toggleHubJournalEditor(false);
+            this.loadHubJournal();
+        } catch (error) {
+            console.error('Error deleting hub note:', error);
+            this.showError('Erro ao excluir reflexão.');
+        }
+    }
+
+    filterHubJournal(query) {
+        const filtered = this.hubJournalNotes.filter(n =>
+            (n.title || '').toLowerCase().includes(query.toLowerCase()) ||
+            (n.content || '').toLowerCase().includes(query.toLowerCase())
+        );
+        this.renderHubJournalList(filtered);
+    }
+
+    stripHTML(html) {
+        const t = document.createElement('div');
+        t.innerHTML = html;
+        return t.textContent || t.innerText || '';
+    }
+
+    // --- Plan Hub Logic ---
+    async updateHubPlanProgress() {
+        if (!this.currentUser) return;
+        try {
+            const snapshot = await db.collection('users').doc(this.currentUser.uid).collection('progress').where('read', '==', true).get();
+            const count = snapshot.size;
+            const perc = Math.round((count / 365) * 100);
+
+            document.getElementById('plan-progress-bar').style.width = `${perc}%`;
+            document.getElementById('plan-percentage').textContent = `${perc}%`;
+            document.getElementById('plan-days-count').textContent = `${count} DE 365 DIAS`;
+
+            // Streak simplified for hub
+            document.getElementById('plan-streak').textContent = `🔥 PROCESSO ATIVO`;
+
+            this.renderMiniCalendar(snapshot.docs.map(d => d.id));
+        } catch (error) {
+            console.error('Error updating hub plan progress:', error);
+        }
+    }
+
+    renderMiniCalendar(readDays) {
+        const grid = document.getElementById('mini-calendar-grid');
+        if (!grid) return;
+
+        // Show 100 dots representing the year (too many for 365 small dots)
+        let html = '';
+        for (let i = 0; i < 100; i++) {
+            const isRead = i < (readDays.length / 3.65); // Rough estimation for visualization
+            html += `<div class="w-2 h-2 rounded-full ${isRead ? 'bg-accent' : 'bg-stone-200 dark:bg-stone-800'}"></div>`;
+        }
+        grid.innerHTML = html;
+    }
+
+    renderHubMiniPlan() {
+        const container = document.getElementById('upcoming-mini-list');
+        if (!container) return;
+
+        const today = new Date();
+        let html = '';
+
+        for (let i = 1; i <= 5; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            const dateStr = date.toISOString().split('T')[0];
+            const diaKey = keys[date.getDay()];
+            const weekNum = this.getWeekNumber(date);
+            const reading = this.calculateReading(diaKey, weekNum);
+
+            html += `
+                <div class="flex items-center gap-3 p-3 bg-white rounded-xl border border-stone-100 dark:bg-stone-800 dark:border-stone-700 cursor-pointer hover:border-accent transition-all group" 
+                     onclick="app.loadReadingByDate('${dateStr}')">
+                    <div class="w-8 h-8 rounded-lg bg-stone-50 flex flex-col items-center justify-center text-[10px] font-bold text-stone-400 dark:bg-stone-900 group-hover:bg-accent group-hover:text-white transition-colors">
+                        <span>${date.getDate()}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h5 class="text-[11px] font-bold text-stone-700 dark:text-stone-300 truncate">${reading.text}</h5>
+                        <p class="text-[9px] text-accent uppercase font-bold tracking-tighter">${reading.theme}</p>
+                    </div>
+                    <span class="material-symbols-outlined text-stone-300 text-sm group-hover:text-accent">chevron_right</span>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+        this.renderHubFullPlan(new Date().getMonth()); // Pre-render current month
+    }
+
+    toggleFullPlanView() {
+        const upcoming = document.getElementById('upcoming-mini-list');
+        const fullView = document.getElementById('full-plan-view');
+        const btn = document.getElementById('toggle-full-plan');
+        const title = document.getElementById('plan-section-title');
+
+        if (fullView.classList.contains('hidden')) {
+            upcoming.classList.add('hidden');
+            fullView.classList.remove('hidden');
+            btn.textContent = 'Ver Próximas';
+            title.textContent = 'Plano Completo';
+        } else {
+            upcoming.classList.remove('hidden');
+            fullView.classList.add('hidden');
+            btn.textContent = 'Ver Todo o Plano';
+            title.textContent = 'Próximas Leituras';
+        }
+    }
+
+    renderHubFullPlan(monthIndex) {
+        const listContainer = document.getElementById('hub-plan-list');
+        const filterContainer = document.getElementById('hub-month-filters');
+        if (!listContainer || !filterContainer) return;
+
+        const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+        const year = new Date().getFullYear();
+
+        // Render month filters
+        filterContainer.innerHTML = months.map((m, i) => `
+            <button onclick="app.renderHubFullPlan(${i})" 
+                class="px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap transition-all ${monthIndex === i ? 'bg-accent text-white' : 'bg-stone-100 text-stone-400 dark:bg-stone-800'}"
+            >${m}</button>
+        `).join('');
+
+        // Render days for the month
+        let html = '';
+        const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const date = new Date(year, monthIndex, d);
+            const dateStr = date.toISOString().split('T')[0];
+            const diaKey = keys[date.getDay()];
+            const weekNum = this.getWeekNumber(date);
+            const reading = this.calculateReading(diaKey, weekNum);
+
+            html += `
+                <div class="flex items-center gap-3 p-2.5 bg-white/50 rounded-xl border border-stone-100 dark:bg-stone-800/50 dark:border-stone-700 cursor-pointer hover:border-accent transition-all group" 
+                     onclick="app.loadReadingByDate('${dateStr}')">
+                    <div class="w-7 h-7 rounded bg-stone-100 flex items-center justify-center text-[10px] font-bold text-stone-500 dark:bg-stone-900 group-hover:bg-accent group-hover:text-white transition-colors">
+                        ${d}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h5 class="text-[10px] font-bold text-stone-700 dark:text-stone-300 truncate">${reading.text}</h5>
+                        <p class="text-[8px] text-accent uppercase font-bold tracking-tighter">${reading.theme}</p>
+                    </div>
+                </div>
+            `;
+        }
+        listContainer.innerHTML = html;
+    }
+
+    async loadReadingByDate(dateStr) {
+        const bibleText = document.getElementById('bible-text');
+        bibleText.innerHTML = '<p class="text-center text-stone-400 py-20">Carregando leitura...</p>';
+
+        const targetDate = new Date(dateStr + 'T12:00:00');
+        const dayOfWeek = targetDate.getDay();
+        const dayKey = keys[dayOfWeek];
+        const weekNumber = this.getWeekNumber(targetDate);
+
+        const reading = this.calculateReading(dayKey, weekNumber);
+        this.currentReferences = reading.references;
+
+        this.currentReading = {
+            text: reading.text,
+            theme: reading.theme,
+            references: reading.references,
+            dayNumber: this.getDayOfYear(targetDate),
+            dayKey: dayKey,
+            weekNumber: weekNumber,
+            finished: false,
+            date: targetDate
+        };
+
+        this.updateHeader();
+        await this.checkReadingProgress();
+        await this.loadBibleText();
+        await this.loadAIInsights();
+
+        document.getElementById('reading-content').scrollTop = 0;
+        this.showSuccess(`Navegado para: ${reading.text}`);
+    }
     async logout() {
         if (confirm('Deseja realmente sair?')) {
             try {
@@ -732,3 +1314,4 @@ Evite clichês. Responda APENAS com o texto da reflexão, sem títulos ou marcad
 
 // Inicializa o app
 const app = new ReaderApp();
+window.app = app;

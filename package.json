@@ -1,0 +1,13 @@
+{
+  "name": "bible-plan",
+  "version": "1.0.0",
+  "description": "Verbum AI - Experiência de Leitura Bíblica",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8080 -c-1",
+    "dev": "npx http-server -p 8080 -c-1 -o"
+  },
+  "keywords": ["bible", "reading"],
+  "author": "",
+  "license": "ISC"
+}

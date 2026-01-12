@@ -31,8 +31,22 @@ class CalendarApp {
             books: 0,
             percentage: 0
         };
+        this.currentStatusFilter = 'pending';
         this.initCache();
+        this.loadTheme();
         this.init();
+    }
+
+    loadTheme() {
+        this.theme = localStorage.getItem('theme') || 'light';
+        const html = document.documentElement;
+        if (this.theme === 'dark') {
+            html.classList.remove('light');
+            html.classList.add('dark');
+        } else {
+            html.classList.add('light');
+            html.classList.remove('dark');
+        }
     }
 
     initCache() {
@@ -189,6 +203,42 @@ class CalendarApp {
         document.getElementById('mobile-sidebar-overlay')?.addEventListener('click', () => {
             this.toggleMobileMenu();
         });
+
+        // Filtro de Próximas Leituras
+        document.getElementById('filter-upcoming-btn')?.addEventListener('click', () => {
+            this.toggleFilter();
+        });
+    }
+
+    toggleFilter() {
+        const statuses = ['all', 'pending', 'read'];
+        const currentIndex = statuses.indexOf(this.currentStatusFilter);
+        const nextIndex = (currentIndex + 1) % statuses.length;
+        this.currentStatusFilter = statuses[nextIndex];
+
+        // Feedback visual no botão e tooltip
+        const btn = document.getElementById('filter-upcoming-btn');
+        const icon = btn.querySelector('.material-symbols-outlined');
+
+        let label = 'Filtrar';
+        if (this.currentStatusFilter === 'pending') {
+            label = 'Mostrando: Pendentes';
+            icon.textContent = 'pending_actions';
+            btn.classList.add('bg-orange-50', 'text-orange-600');
+            btn.classList.remove('bg-green-50', 'text-green-600', 'bg-primary/10', 'text-primary');
+        } else if (this.currentStatusFilter === 'read') {
+            label = 'Mostrando: Concluídas';
+            icon.textContent = 'task_alt';
+            btn.classList.add('bg-green-50', 'text-green-600');
+            btn.classList.remove('bg-orange-50', 'text-orange-600', 'bg-primary/10', 'text-primary');
+        } else {
+            label = 'Mostrando: Tudo';
+            icon.textContent = 'filter_list';
+            btn.classList.remove('bg-green-50', 'text-green-600', 'bg-orange-50', 'text-orange-600');
+        }
+
+        btn.title = `${label} (Clique para alternar)`;
+        this.renderUpcomingReadings();
     }
 
     toggleMobileMenu() {
@@ -233,7 +283,6 @@ class CalendarApp {
 
     async loadUserProgress() {
         if (!this.currentUser) {
-            console.warn('Usuário não autenticado - não é possível carregar progresso');
             this.calculateStats();
             this.updateStatsUI();
             this.renderCalendar();
@@ -241,8 +290,6 @@ class CalendarApp {
         }
 
         try {
-            console.log('Carregando progresso do usuário:', this.currentUser.uid);
-
             db.collection('users')
                 .doc(this.currentUser.uid)
                 .collection('progress')
@@ -253,12 +300,10 @@ class CalendarApp {
                         this.readDays.add(doc.id);
                     });
 
-                    console.log(`✅ ${this.readDays.size} dias lidos carregados do Firebase`);
-
                     this.calculateStats();
                     this.updateStatsUI();
                     this.renderCalendar();
-                    this.renderUpcomingReadings(); // Novo: renderiza a barra lateral direita
+                    this.renderUpcomingReadings();
                 }, (error) => {
                     console.error('Erro ao carregar progresso:', error);
                     this.calculateStats();
@@ -276,7 +321,6 @@ class CalendarApp {
         this.stats.chapters = this.readDays.size;
         this.stats.percentage = Math.round((this.readDays.size / 365) * 100);
 
-        // Calcular sequência (streak) - começa de hoje e volta no tempo
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         let streak = 0;
@@ -289,14 +333,10 @@ class CalendarApp {
             if (this.readDays.has(dateStr)) {
                 streak++;
             } else {
-                // Se encontrou um dia não lido, para de contar
-                // Mas se for o primeiro dia (hoje), continua checando ontem
                 if (i > 0) break;
             }
         }
         this.stats.streak = streak;
-
-        // Calcular livros completos (simplificado)
         this.stats.books = Math.floor(this.readDays.size / 20);
     }
 
@@ -320,7 +360,6 @@ class CalendarApp {
         const currentMonth = new Date().getMonth();
         const currentDay = new Date().getDate();
 
-        // Atualiza o título com o ano atual
         const titleEl = document.getElementById('calendar-title');
         if (titleEl) {
             titleEl.textContent = `Bíblia Anual ${currentYear}`;
@@ -332,18 +371,15 @@ class CalendarApp {
             const daysInMonth = new Date(currentYear, month + 1, 0).getDate();
             const isCurrentMonth = month === currentMonth;
             const isPastMonth = month < currentMonth;
-            const isFutureMonth = month > currentMonth;
 
-            // Status do mês
             let monthStatus = '';
             let monthClass = '';
 
             if (isPastMonth) {
-                // Verificar se foi completado
                 const allDaysRead = this.isMonthComplete(currentYear, month);
                 monthStatus = allDaysRead ?
-                    '<span class="text-[10px] text-green-500 bg-green-50 px-2 py-0.5 rounded-full">Completo</span>' :
-                    '<span class="text-[10px] text-stone-400 bg-stone-50 px-2 py-0.5 rounded-full">Parcial</span>';
+                    '<span class="text-[10px] text-green-500 bg-green-50 px-2 py-0.5 rounded-full dark:bg-green-900/30">Completo</span>' :
+                    '<span class="text-[10px] text-stone-400 bg-stone-50 px-2 py-0.5 rounded-full dark:bg-stone-800/50">Parcial</span>';
                 monthClass = allDaysRead ? 'shadow-sm' : 'opacity-80';
             } else if (isCurrentMonth) {
                 monthStatus = '<span class="text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded-full">Em Andamento</span>';
@@ -353,8 +389,8 @@ class CalendarApp {
             }
 
             html += `
-                <div class="bg-white p-5 rounded-xl border border-stone-100 ${monthClass}">
-                    <h3 class="font-display font-bold text-stone-700 mb-4 text-sm uppercase tracking-wider text-center flex justify-between items-center">
+                <div class="bg-white p-5 rounded-xl border border-stone-100 dark:bg-stone-900 dark:border-stone-800 ${monthClass}">
+                    <h3 class="font-display font-bold text-stone-700 dark:text-stone-300 mb-4 text-sm uppercase tracking-wider text-center flex justify-between items-center">
                         <span>${monthNames[month]}</span>
                         ${monthStatus}
                     </h3>
@@ -364,16 +400,12 @@ class CalendarApp {
                 </div>
             `;
         }
-
         calendarGrid.innerHTML = html;
-
-        // Adicionar event listeners aos dias
         this.attachDayListeners();
     }
 
     renderMonthDays(year, month, daysInMonth, isCurrentMonth, currentDay) {
         let html = '';
-
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(year, month, day);
             const dateStr = date.toISOString().split('T')[0];
@@ -381,18 +413,17 @@ class CalendarApp {
             const isToday = isCurrentMonth && day === currentDay;
             const isFuture = date > new Date();
 
-            // Busca a leitura do dia
             const reading = this.getReadingForDate(date);
             const dayOfWeek = dayNames[date.getDay()];
             const tooltip = `${dayOfWeek} ${day}: ${reading.theme}\n${reading.text}\n${isRead ? '✓ Concluído' : '○ Pendente'}`;
 
-            let dayClass = 'bg-stone-100';
+            let dayClass = 'bg-stone-100 dark:bg-stone-800/50';
             let dayContent = '';
 
             if (isRead) {
                 dayClass = 'bg-accent';
             } else if (isFuture) {
-                dayClass = 'bg-stone-100';
+                dayClass = 'bg-stone-100 dark:bg-stone-800/50';
             }
 
             if (isToday) {
@@ -403,30 +434,21 @@ class CalendarApp {
             html += `
                 <div class="day-sq ${dayClass} cursor-pointer hover:scale-110 hover:shadow-md transition-all" 
                      data-date="${dateStr}"
-                     data-reading="${reading.text}"
-                     data-theme="${reading.theme}"
                      title="${tooltip}">
                     ${dayContent}
                 </div>
             `;
         }
-
         return html;
     }
 
     isMonthComplete(year, month) {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         let completedDays = 0;
-
         for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(year, month, day);
-            const dateStr = date.toISOString().split('T')[0];
-
-            if (this.readDays.has(dateStr)) {
-                completedDays++;
-            }
+            const dateStr = new Date(year, month, day).toISOString().split('T')[0];
+            if (this.readDays.has(dateStr)) completedDays++;
         }
-
         return completedDays === daysInMonth;
     }
 
@@ -434,9 +456,7 @@ class CalendarApp {
         document.querySelectorAll('.day-sq').forEach(dayElement => {
             dayElement.addEventListener('click', (e) => {
                 const date = e.target.dataset.date;
-                if (date) {
-                    this.showDayDetails(date);
-                }
+                if (date) this.showDayDetails(date);
             });
         });
     }
@@ -448,7 +468,6 @@ class CalendarApp {
                 window.location.href = 'index.html';
             } catch (error) {
                 console.error('Erro ao fazer logout:', error);
-                alert('Erro ao sair. Tente novamente.');
             }
         }
     }
@@ -461,19 +480,19 @@ class CalendarApp {
 
         const modalHtml = `
             <div id="day-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" style="animation: fadeIn 0.2s ease-out;">
-                <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative" style="animation: slideUp 0.3s ease-out;">
+                <div class="bg-white dark:bg-stone-900 dark:border dark:border-stone-800 rounded-2xl shadow-2xl max-w-md w-full p-6 relative" style="animation: slideUp 0.3s ease-out;">
                     <button onclick="document.getElementById('day-modal').remove()" class="absolute top-4 right-4 text-stone-400 hover:text-stone-600">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                     
                     <div class="mb-4">
                         <div class="text-sm text-stone-500 mb-1">${dayOfWeek}, ${date.toLocaleDateString('pt-BR')}</div>
-                        <h2 class="text-2xl font-display font-bold text-primary">${reading.theme}</h2>
+                        <h2 class="text-2xl font-display font-bold text-primary dark:text-accent">${reading.theme}</h2>
                     </div>
                     
-                    <div class="bg-cream-bg p-4 rounded-xl mb-4">
+                    <div class="bg-cream-bg dark:bg-stone-950/50 p-4 rounded-xl mb-4">
                         <div class="text-sm text-stone-500 mb-1">Leitura do Dia:</div>
-                        <div class="text-lg font-reading font-semibold text-stone-700">${reading.text}</div>
+                        <div class="text-lg font-reading font-semibold text-stone-700 dark:text-stone-200">${reading.text}</div>
                     </div>
                     
                     <div class="flex items-center gap-2 mb-6">
@@ -489,18 +508,14 @@ class CalendarApp {
                         <button onclick="window.location.href='reader.html?date=${dateStr}'" class="flex-1 bg-primary text-white px-4 py-3 rounded-lg hover:bg-primary/90 transition-colors font-display font-semibold">
                             📖 Ler Agora
                         </button>
-                        <button onclick="document.getElementById('day-modal').remove()" class="px-4 py-3 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors">
+                        <button onclick="document.getElementById('day-modal').remove()" class="px-4 py-3 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors dark:text-stone-300">
                             Fechar
                         </button>
                     </div>
                 </div>
             </div>
         `;
-
-        // Remove modal anterior se existir
         document.getElementById('day-modal')?.remove();
-
-        // Adiciona novo modal
         document.body.insertAdjacentHTML('beforeend', modalHtml);
     }
 
@@ -509,45 +524,15 @@ class CalendarApp {
         if (!container) return;
 
         const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-
         let html = '';
 
-        // 1. Renderiza "Hoje"
-        const todayReading = this.getReadingForDate(today);
-        const todayStr = today.toISOString().split('T')[0];
-        const isTodayRead = this.readDays.has(todayStr);
-        const dayOfMonth = today.getDate();
-        const monthShort = today.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+        let sectionTitle = 'Próximos Dias';
+        if (this.currentStatusFilter === 'pending') sectionTitle = 'Aguardando Leitura';
+        if (this.currentStatusFilter === 'read') sectionTitle = 'Histórico de Leituras';
 
-        html += `
-            <div class="relative">
-                <div class="absolute -left-6 top-3 w-1 h-8 bg-primary rounded-r"></div>
-                <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3 pl-1">Hoje • ${dayOfMonth} ${monthShort}</p>
-                <div class="bg-white p-5 rounded-xl border ${isTodayRead ? 'border-green-100 bg-green-50/20' : 'border-stone-200 shadow-md'} group hover:border-primary/30 transition-all cursor-pointer" onclick="window.location.href='reader.html'">
-                    <div class="flex justify-between items-start mb-3">
-                        <span class="px-2 py-1 rounded ${this.getCategoryColor(today.getDay())} text-[10px] font-bold uppercase tracking-wider">${keys[today.getDay()]} • ${todayReading.theme}</span>
-                        <span class="material-symbols-outlined ${isTodayRead ? 'text-green-500' : 'text-stone-300 group-hover:text-primary'} transition-colors">
-                            ${isTodayRead ? 'check_circle' : 'play_circle'}
-                        </span>
-                    </div>
-                    <h3 class="font-reading font-bold text-stone-800 text-lg mb-1">${todayReading.text}</h3>
-                    <p class="text-xs text-stone-500 line-clamp-2 leading-relaxed">
-                        ${isTodayRead ? 'Leitura concluída! Ótimo trabalho.' : 'Inicie sua jornada espiritual de hoje.'}
-                    </p>
-                </div>
-            </div>
-        `;
+        let hasToday = false;
 
-        // 2. Renderiza "Esta Semana" (próximos 6 dias)
-        html += `
-            <div>
-                <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3 pl-1">Próximos Dias</p>
-                <div class="space-y-3">
-        `;
-
-        for (let i = 1; i <= 6; i++) {
+        for (let i = 0; i <= 30; i++) {
             const date = new Date(today);
             date.setDate(today.getDate() + i);
             const dateStr = date.toISOString().split('T')[0];
@@ -556,45 +541,78 @@ class CalendarApp {
             const dayName = dayNames[date.getDay()];
             const dayNum = date.getDate();
 
-            html += `
-                <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-white border border-transparent hover:border-stone-100 transition-all group cursor-pointer" onclick="calendarApp.showDayDetails('${dateStr}')">
-                    <div class="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-stone-100 text-stone-500 group-hover:bg-accent/10 group-hover:text-accent transition-colors">
-                        <span class="text-[9px] font-bold uppercase">${dayName}</span>
-                        <span class="text-sm font-bold">${dayNum}</span>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2 mb-0.5">
-                            <h4 class="text-sm font-bold text-stone-700">${reading.theme}</h4>
-                            ${isRead ? '<span class="material-symbols-outlined text-green-500 text-xs text-xs font-bold">check_circle</span>' : ''}
+            if (this.currentStatusFilter === 'pending' && isRead) continue;
+            if (this.currentStatusFilter === 'read' && !isRead) continue;
+
+            const isToday = i === 0;
+
+            if (isToday && this.currentStatusFilter !== 'read') {
+                hasToday = true;
+                const monthShort = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+
+                html += `
+                    <div class="relative mb-8 text-left">
+                        <div class="absolute -left-6 top-3 w-1 h-8 bg-primary rounded-r"></div>
+                        <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3 pl-1">Hoje • ${dayNum} ${monthShort}</p>
+                        <div class="bg-white p-5 rounded-xl border ${isRead ? 'border-green-100 bg-green-50/20' : 'border-stone-200 shadow-md'} group hover:border-primary/30 transition-all cursor-pointer dark:bg-stone-900 dark:border-stone-800" onclick="window.location.href='reader.html'">
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="px-2 py-1 rounded ${this.getCategoryColor(date.getDay())} text-[10px] font-bold uppercase tracking-wider">${keys[date.getDay()]} • ${reading.theme}</span>
+                                <span class="material-symbols-outlined ${isRead ? 'text-green-500' : 'text-stone-300 group-hover:text-primary'} transition-colors">
+                                    ${isRead ? 'check_circle' : 'play_circle'}
+                                </span>
+                            </div>
+                            <h3 class="font-reading font-bold text-stone-800 text-lg mb-1 dark:text-stone-100">${reading.text}</h3>
+                            <p class="text-xs text-stone-500 line-clamp-2 leading-relaxed">
+                                ${isRead ? 'Leitura concluída! Ótimo trabalho.' : 'Inicie sua jornada espiritual de hoje.'}
+                            </p>
                         </div>
-                        <p class="text-xs text-stone-500">${reading.text}</p>
                     </div>
-                    <span class="material-symbols-outlined text-stone-300 text-sm">chevron_right</span>
-                </div>
-            `;
+                `;
+            } else {
+                if (html === '' || (hasToday && !html.includes(sectionTitle))) {
+                    html += `<p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3 pl-1 text-left">${sectionTitle}</p><div class="space-y-3">`;
+                }
+
+                html += `
+                    <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-white border border-transparent hover:border-stone-100 transition-all group cursor-pointer dark:hover:bg-stone-800/50" onclick="calendarApp.showDayDetails('${dateStr}')">
+                        <div class="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-stone-100 text-stone-500 group-hover:bg-accent/10 group-hover:text-accent transition-colors dark:bg-stone-800 dark:text-stone-400">
+                            <span class="text-[9px] font-bold uppercase">${dayName}</span>
+                            <span class="text-sm font-bold">${dayNum}</span>
+                        </div>
+                        <div class="flex-1 text-left">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <h4 class="text-sm font-bold text-stone-700 dark:text-stone-200">${reading.theme}</h4>
+                                ${isRead ? '<span class="material-symbols-outlined text-green-500 text-xs font-bold">check_circle</span>' : ''}
+                            </div>
+                            <p class="text-xs text-stone-500 dark:text-stone-400">${reading.text}</p>
+                        </div>
+                        <span class="material-symbols-outlined text-stone-300 text-sm">chevron_right</span>
+                    </div>
+                `;
+            }
         }
 
-        html += `
-                </div>
-            </div>
-        `;
+        if (html === '') {
+            const msg = this.currentStatusFilter === 'read' ? 'Nenhuma leitura concluída encontrada.' : 'Todas as próximas leituras concluídas! 🎉';
+            html = `<div class="text-center py-20 text-stone-400">
+                        <span class="material-symbols-outlined text-4xl mb-2 opacity-20">auto_stories</span>
+                        <p class="text-sm">${msg}</p>
+                    </div>`;
+        } else if (html.includes('space-y-3')) {
+            html += `</div>`;
+        }
 
         container.innerHTML = html;
     }
 
     getCategoryColor(dayIndex) {
         const colors = [
-            'bg-teal-50 text-teal-700',   // Domingo
-            'bg-blue-50 text-blue-700',   // Segunda
-            'bg-orange-50 text-orange-700', // Terça
-            'bg-purple-50 text-purple-700', // Quarta
-            'bg-pink-50 text-pink-700',    // Quinta
-            'bg-yellow-50 text-yellow-700', // Sexta
-            'bg-stone-50 text-stone-700'   // Sábado
+            'bg-teal-50 text-teal-700', 'bg-blue-50 text-blue-700', 'bg-orange-50 text-orange-700',
+            'bg-purple-50 text-purple-700', 'bg-pink-50 text-pink-700', 'bg-yellow-50 text-yellow-700',
+            'bg-stone-50 text-stone-700'
         ];
         return colors[dayIndex] || 'bg-stone-50 text-stone-700';
     }
 }
 
-// Inicializa o app
 const calendarApp = new CalendarApp();

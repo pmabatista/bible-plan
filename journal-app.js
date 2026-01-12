@@ -12,7 +12,20 @@ class JournalApp {
         this.currentNote = null;
         this.notes = [];
         this.saveTimeout = null;
+        this.loadTheme();
         this.init();
+    }
+
+    loadTheme() {
+        this.theme = localStorage.getItem('theme') || 'light';
+        const html = document.documentElement;
+        if (this.theme === 'dark') {
+            html.classList.remove('light');
+            html.classList.add('dark');
+        } else {
+            html.classList.add('light');
+            html.classList.remove('dark');
+        }
     }
 
     async init() {
@@ -130,6 +143,22 @@ class JournalApp {
         document.getElementById('toggle-list-btn')?.addEventListener('click', () => {
             this.toggleNotesSidebar();
         });
+
+        // Insert Link button
+        document.getElementById('insert-link-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.insertLink();
+        });
+
+        // Share button
+        document.getElementById('share-btn')?.addEventListener('click', () => {
+            this.shareNote();
+        });
+
+        // Options button (delete note)
+        document.getElementById('options-btn')?.addEventListener('click', (e) => {
+            this.showOptions(e);
+        });
     }
 
     toggleNotesSidebar() {
@@ -232,18 +261,18 @@ class JournalApp {
             const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
             const isActive = this.currentNote && this.currentNote.id === note.id;
-            const activeClass = isActive ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50';
+            const activeClass = isActive ? 'bg-white shadow-sm ring-1 ring-black/5 dark:bg-stone-800 dark:ring-white/5' : 'hover:bg-white/50 dark:hover:bg-stone-900/50';
             const borderClass = isActive ? 'border-l-4 border-accent' : 'border-l-4 border-transparent';
 
             html += `
-                <div class="p-5 border-b border-paper-border ${activeClass} transition-all cursor-pointer group ${borderClass}" 
+                <div class="p-5 border-b border-paper-border dark:border-stone-800 ${activeClass} transition-all cursor-pointer group ${borderClass}" 
                      data-note-id="${note.id}">
                     <div class="flex justify-between items-start mb-1">
-                        <span class="text-[11px] font-bold text-${isActive ? 'primary' : 'stone-400'} uppercase tracking-wider group-hover:text-primary transition-colors">${dateStr}</span>
-                        <span class="text-[10px] text-stone-400 font-mono">${timeStr}</span>
+                        <span class="text-[11px] font-bold text-${isActive ? 'primary' : 'stone-400'} dark:text-${isActive ? 'accent' : 'stone-500'} uppercase tracking-wider group-hover:text-primary dark:group-hover:text-accent transition-colors">${dateStr}</span>
+                        <span class="text-[10px] text-stone-400 font-mono dark:text-stone-600">${timeStr}</span>
                     </div>
-                    <h3 class="font-display font-semibold text-stone-800 text-sm mb-2">${note.title || 'Sem título'}</h3>
-                    <p class="text-xs text-stone-500 line-clamp-2 font-reading leading-relaxed">
+                    <h3 class="font-display font-semibold text-stone-800 dark:text-stone-200 text-sm mb-2">${note.title || 'Sem título'}</h3>
+                    <p class="text-xs text-stone-500 dark:text-stone-400 line-clamp-2 font-reading leading-relaxed">
                         ${this.stripHTML(note.content || '').substring(0, 100)}...
                     </p>
                 </div>
@@ -306,8 +335,31 @@ class JournalApp {
     }
 
     formatText(command, value = null) {
+        // Para blockquote, o execCommand 'formatBlock' precisa de tratamento especial em alguns navegadores
+        if (command === 'formatBlock' && value === 'blockquote') {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const closestBlockquote = range.commonAncestorContainer.parentElement.closest('blockquote');
+
+                if (closestBlockquote) {
+                    // Se já estiver em um blockquote, vamos tentar remover (comportamento simplificado)
+                    document.execCommand('formatBlock', false, 'p');
+                    return;
+                }
+            }
+        }
+
         document.execCommand(command, false, value);
         document.getElementById('note-content').focus();
+    }
+
+    insertLink() {
+        const url = prompt('Digite a URL do link:', 'https://');
+        if (url && url !== 'https://') {
+            document.execCommand('createLink', false, url);
+            document.getElementById('note-content').focus();
+        }
     }
 
     scheduleAutoSave() {
@@ -363,24 +415,120 @@ class JournalApp {
             console.error('Erro ao salvar nota:', error);
             document.getElementById('save-status').textContent = 'Erro ao salvar';
         }
+        searchNotes(query) {
+            if (!query) {
+                this.renderNotesList();
+                return;
+            }
+
+            const filtered = this.notes.filter(note => {
+                const title = (note.title || '').toLowerCase();
+                const content = this.stripHTML(note.content || '').toLowerCase();
+                const searchTerm = query.toLowerCase();
+
+                return title.includes(searchTerm) || content.includes(searchTerm);
+            });
+
+            // Renderizar apenas notas filtradas
+            this.renderNotesList(filtered);
+        }
+
     }
 
-    searchNotes(query) {
-        if (!query) {
-            this.renderNotesList();
+    async shareNote() {
+        if (!this.currentNote) return;
+
+        const title = document.getElementById('note-title').value || 'Sem título';
+        const content = this.stripHTML(document.getElementById('note-content').innerHTML);
+
+        const shareData = {
+            title: `Reflexão: ${title}`,
+            text: `${title}\n\n${content}`,
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                // Fallback: copiar para área de transferência
+                await navigator.clipboard.writeText(shareData.text);
+                alert('Conteúdo copiado para a área de transferência!');
+            }
+        } catch (err) {
+            console.error('Erro ao compartilhar:', err);
+        }
+    }
+
+    showOptions(event) {
+        if (!this.currentNote) return;
+
+        // Criar um menu de contexto simples próximo ao botão
+        const existingMenu = document.getElementById('options-menu');
+        if (existingMenu) {
+            existingMenu.remove();
             return;
         }
 
-        const filtered = this.notes.filter(note => {
-            const title = (note.title || '').toLowerCase();
-            const content = this.stripHTML(note.content || '').toLowerCase();
-            const searchTerm = query.toLowerCase();
+        const menu = document.createElement('div');
+        menu.id = 'options-menu';
+        menu.className = 'fixed bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg shadow-xl py-1 z-[100] w-48';
 
-            return title.includes(searchTerm) || content.includes(searchTerm);
+        const rect = event.currentTarget.getBoundingClientRect();
+        menu.style.top = `${rect.bottom + 8}px`;
+        menu.style.right = `${window.innerWidth - rect.right}px`;
+
+        menu.innerHTML = `
+            <button class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2" id="delete-note-btn">
+                <span class="material-symbols-outlined text-sm">delete</span>
+                Excluir Nota
+            </button>
+        `;
+
+        document.body.appendChild(menu);
+
+        // Listener para o botão de deletar
+        document.getElementById('delete-note-btn').addEventListener('click', () => {
+            this.deleteNote();
+            menu.remove();
         });
 
-        // Renderizar apenas notas filtradas
-        this.renderNotesList(filtered);
+        // Fechar menu ao clicar fora
+        const closeMenu = (e) => {
+            if (!menu.contains(e.target) && e.target !== event.currentTarget) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeMenu), 0);
+    }
+
+    async deleteNote() {
+        if (!this.currentNote || !this.currentUser) return;
+
+        if (!confirm('Deseja realmente excluir esta nota? Esta ação não pode ser desfeita.')) return;
+
+        try {
+            await db.collection('users')
+                .doc(this.currentUser.uid)
+                .collection('journal')
+                .doc(this.currentNote.id)
+                .delete();
+
+            // Remover da lista local
+            this.notes = this.notes.filter(n => n.id !== this.currentNote.id);
+
+            // Se houver mais notas, carregar a primeira, senão criar nova
+            if (this.notes.length > 0) {
+                this.loadNote(this.notes[0]);
+            } else {
+                this.createNewNote();
+            }
+
+            this.renderNotesList();
+        } catch (error) {
+            console.error('Erro ao excluir nota:', error);
+            alert('Erro ao excluir nota.');
+        }
     }
 }
 
